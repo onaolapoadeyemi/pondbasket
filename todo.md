@@ -25,3 +25,4 @@
 - [x] Add a persistent single-farmer cart and cart-to-checkout flow.
 - [x] Add customer order timelines, delivery-PIN confirmation, and dispute submission controls.
 - [x] Add route-level query error recovery states and final workflow tests.
+- [x] Fix the Vite preview WebSocket connection failure reported on the customer profile route.

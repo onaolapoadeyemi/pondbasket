@@ -9,7 +9,11 @@ import viteConfig from "../../vite.config";
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    // The managed preview proxy serves HTTP but does not reliably relay Vite
+    // upgrade traffic. Disable browser HMR rather than shipping a client that
+    // retries an unreachable localhost WebSocket. File changes remain served
+    // by the development server after an ordinary page refresh.
+    hmr: false,
     allowedHosts: true as const,
   };
 
@@ -38,8 +42,22 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      // The managed preview tunnel does not expose Vite's WebSocket upgrade
+      // channel. Preserve the React development preamble that transformed JSX
+      // modules require, but remove only Vite's WebSocket client. Refreshed
+      // pages continue to load current source without an unreachable HMR retry.
+      const reactPreamble = `<script type="module">
+import RefreshRuntime from "/@react-refresh";
+RefreshRuntime.injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+window.__vite_plugin_react_preamble_installed__ = true;
+</script>`;
+      const page = (await vite.transformIndexHtml(url, template)).replace(
+        /<script type="module" src="\/@vite\/client"><\/script>/,
+        reactPreamble
+      );
+      res.status(200).set({ "Content-Type": "text/html", "Cache-Control": "no-store" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);

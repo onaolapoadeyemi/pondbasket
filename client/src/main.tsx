@@ -9,7 +9,14 @@ import { startLogin } from "./const";
 import { CartProvider } from "./contexts/CartContext";
 import "./index.css";
 
-if ("serviceWorker" in navigator) {
+const isManagedPreview = location.hostname.endsWith(".manus.computer") || location.hostname === "127.0.0.1" || location.hostname === "localhost";
+
+if (isManagedPreview && "serviceWorker" in navigator) {
+  // Preview sessions must never retain an old development HTML shell: it can
+  // reference a previous Vite client and its unreachable HMR WebSocket.
+  navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(registrations.map(registration => registration.unregister()))).catch(() => undefined);
+  if ("caches" in window) caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith("pondbasket-shell-")).map(key => caches.delete(key)))).catch(() => undefined);
+} else if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {
       // Offline enhancement must never block the marketplace experience.
