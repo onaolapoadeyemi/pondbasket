@@ -26,3 +26,4 @@
 - [x] Add customer order timelines, delivery-PIN confirmation, and dispute submission controls.
 - [x] Add route-level query error recovery states and final workflow tests.
 - [x] Fix the Vite preview WebSocket connection failure reported on the customer profile route.
+- [x] Eliminate the remaining secure Vite WebSocket handshake failure on the managed preview profile route.
