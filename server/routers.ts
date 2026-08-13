@@ -184,6 +184,15 @@ export const appRouter = router({
       const application = await db.select().from(farmerApplications).where(eq(farmerApplications.userId, ctx.user.id)).limit(1);
       return application[0] ?? null;
     }),
+    saveDraft: protectedProcedure.input(z.object({ legalName: z.string().min(2).max(160), farmName: z.string().min(2).max(160), phone: z.string().min(7).max(32), state: z.string().min(2).max(80), lga: z.string().min(2).max(100), generalFarmArea: z.string().min(2).max(160), zones: z.array(z.string().min(2)).min(1).max(8), species: z.array(z.enum(PRODUCT_SPECIES)).min(1).max(2), weeklyCapacityKg: z.number().int().positive().max(100000), fulfillment: z.array(z.enum(["pickup", "farmer_delivery", "platform_delivery"])).min(1), bankName: z.string().min(2).max(100), accountNumber: z.string().regex(/^\d{10}$/), accountName: z.string().min(2).max(160) })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const existing = await db.select().from(farmerApplications).where(eq(farmerApplications.userId, ctx.user.id)).limit(1);
+      if (existing[0] && !["DRAFT", "REJECTED"].includes(existing[0].status)) throw new TRPCError({ code: "CONFLICT", message: "This application is already under review or has been decided." });
+      const payload = { userId: ctx.user.id, legalName: input.legalName, farmName: input.farmName, phone: input.phone, state: input.state, lga: input.lga, generalFarmArea: input.generalFarmArea, zonesJson: input.zones, speciesJson: input.species, weeklyCapacityKg: input.weeklyCapacityKg, fulfillmentJson: input.fulfillment, bankName: input.bankName, maskedAccountNumber: maskBankAccount(input.accountNumber), resolvedAccountName: input.accountName, status: "DRAFT" as const, submittedAt: null };
+      if (existing[0]) await db.update(farmerApplications).set(payload).where(eq(farmerApplications.id, existing[0].id)); else await db.insert(farmerApplications).values(payload);
+      return { success: true, status: "DRAFT" as const };
+    }),
     submitApplication: protectedProcedure.input(z.object({ legalName: z.string().min(2).max(160), farmName: z.string().min(2).max(160), phone: z.string().min(7).max(32), state: z.string().min(2).max(80), lga: z.string().min(2).max(100), generalFarmArea: z.string().min(2).max(160), zones: z.array(z.string().min(2)).min(1).max(8), species: z.array(z.enum(PRODUCT_SPECIES)).min(1).max(2), weeklyCapacityKg: z.number().int().positive().max(100000), fulfillment: z.array(z.enum(["pickup", "farmer_delivery", "platform_delivery"])).min(1), bankName: z.string().min(2).max(100), accountNumber: z.string().regex(/^\d{10}$/), accountName: z.string().min(2).max(160) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -296,6 +305,12 @@ export const appRouter = router({
       if (input.to === "DISPATCHED") { pin = crypto.randomInt(100000, 999999).toString(); setValues.deliveryPinHash = hashPin(pin); setValues.pinExpiresAt = new Date(Date.now() + 6 * 60 * 60 * 1000); }
       await db.update(orders).set(setValues).where(eq(orders.id, input.orderId));
       await appendOrderEvent(input.orderId, ctx.user.id, order.status, input.to, input.reason ?? null);
+      const farmerOwner = await db.select().from(farmerApplications).where(eq(farmerApplications.id, order.farmerApplicationId)).limit(1);
+      const customerOwner = await db.select().from(customerProfiles).where(eq(customerProfiles.id, order.customerId)).limit(1);
+      const customerMessage: Record<string, [string, string]> = { FARMER_ACCEPTED: ["Farmer accepted your order", "Your fish order is now being prepared."], FARMER_REJECTED: ["Farmer could not accept this order", "Your protected payment will enter the refund-review workflow."], READY: ["Your fish is ready", "Your selected fulfillment window is approaching."], DISPATCHED: ["Your fish has been dispatched", "Inspect your fish before sharing the buyer-held delivery PIN."] };
+      const message = customerMessage[input.to];
+      if (message && customerOwner[0]) await simulateNotification(customerOwner[0].userId, input.to.toLowerCase(), message[0], message[1]);
+      if (message && farmerOwner[0]) await simulateNotification(farmerOwner[0].userId, input.to.toLowerCase(), message[0], message[1]);
       return { success: true, demoCustomerPin: pin };
     }),
     confirmDelivery: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), pin: z.string().regex(/^\d{6}$/) })).mutation(async ({ ctx, input }) => {

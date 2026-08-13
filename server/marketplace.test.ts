@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertOrderTransition, calculatePricing, maskBankAccount } from "../shared/domain";
+import { PRODUCT_SPECIES } from "../shared/brand";
 
 describe("PondBasket pricing integrity", () => {
   it("calculates the 10% founding-farmer commission in integer kobo", () => {
@@ -28,6 +29,17 @@ describe("PondBasket order state machine", () => {
     expect(() => assertOrderTransition("PAID", "DELIVERED_PENDING_RELEASE")).toThrow("Illegal order transition");
     expect(() => assertOrderTransition("COMPLETED", "COMPLETED")).toThrow("Illegal order transition");
   });
+
+  it("blocks payout-unsafe transitions from an open dispute", () => {
+    expect(() => assertOrderTransition("DISPUTED", "FARMER_ACCEPTED")).toThrow("Illegal order transition");
+  });
+});
+
+describe("PondBasket catalog boundary", () => {
+  it("exposes only the two approved launch species", () => {
+    expect(PRODUCT_SPECIES).toEqual(["catfish", "tilapia"]);
+    expect(PRODUCT_SPECIES).not.toContain("mackerel");
+  });
 });
 
 describe("PondBasket private financial display", () => {
@@ -35,4 +47,3 @@ describe("PondBasket private financial display", () => {
     expect(maskBankAccount("0123456789")).toBe("••••••6789");
   });
 });
-

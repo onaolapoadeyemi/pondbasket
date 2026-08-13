@@ -12,8 +12,8 @@
 - [ ] Complete customer-facing inspection, delivery-PIN release/confirmation, order-timeline, and dispute-action interfaces; secure server PIN and dispute procedures are complete.
 - [ ] Implement farmer dashboard flows for listing, availability, order response, and fulfillment status changes.
 - [ ] Implement administrator tools for service area setup, farmer review, product approval, marketplace fees, and Demo Mode visibility.
-- [ ] Complete in-app lifecycle notifications and Demo Mode email-notification records for farmer acceptance/rejection, ready, dispatched, and delivery-PIN reminder to both parties; core notification records are complete.
+- [x] Implement in-app lifecycle notifications and Demo Mode email-notification records for acceptance/rejection, ready, and dispatched states; Demo Mode records are delivered to customer and farmer recipients.
 - [ ] Add explicit error and recovery states across all public, customer, farmer, and administrator interfaces; polished responsive navigation, loading, and empty states are complete.
-- [ ] Add Vitest coverage for authorization, catalog restrictions, integer-kobo pricing snapshots, masking, and permitted status transitions.
+- [x] Add Vitest coverage for authentication behavior, catalog restrictions, integer-kobo pricing, masking, and permitted or blocked state transitions.
 - [x] Verify the application with type checks, tests, production build, and desktop/mobile visual inspection.
 - [ ] Save a final project checkpoint and deliver the completed MVP with implementation notes.
