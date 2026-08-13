@@ -1,25 +1,27 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import Admin from "@/pages/Admin";
-import Cart from "@/pages/Cart";
-import CustomerHub from "@/pages/CustomerHub";
-import FarmerPortal from "@/pages/FarmerPortal";
-import Favorites from "@/pages/Favorites";
-import LegalCenter from "@/pages/LegalCenter";
-import ProductDetail from "@/pages/ProductDetail";
-import Shop from "@/pages/Shop";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PondShell } from "./components/PondShell";
 import { QueryRecoveryBanner } from "./components/QueryRecoveryBanner";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import { lazy, Suspense } from "react";
+
+const Home = lazy(() => import("./pages/Home"));
+const Shop = lazy(() => import("@/pages/Shop"));
+const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
+const Cart = lazy(() => import("@/pages/Cart"));
+const Favorites = lazy(() => import("@/pages/Favorites"));
+const CustomerHub = lazy(() => import("@/pages/CustomerHub"));
+const FarmerPortal = lazy(() => import("@/pages/FarmerPortal"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const LegalCenter = lazy(() => import("@/pages/LegalCenter"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <PondShell><Switch>
+    <PondShell><Suspense fallback={<main className="container py-14"><div className="h-64 animate-pulse rounded-[30px] bg-[#e8e7dc]" /></main>}><Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/shop/:id"} component={ProductDetail} />
       <Route path={"/shop"} component={Shop} />
@@ -35,7 +37,7 @@ function Router() {
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
-    </Switch></PondShell>
+    </Switch></Suspense></PondShell>
   );
 }
 

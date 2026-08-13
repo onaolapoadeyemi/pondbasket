@@ -39,3 +39,4 @@
 - [x] Add server-contract favorites regression coverage for save, remove, readback, and unavailable-listing rejection.
 - [x] Place FavoriteButton directly within ProductDetail page content across breakpoints.
 - [x] Cover customer.favorites saved-listing readback in the direct tRPC regression suite.
+- [x] Add route-level lazy loading and vendor chunk splitting to remove the oversized production bundle warning.
