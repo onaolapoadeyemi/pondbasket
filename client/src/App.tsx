@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
+import Cart from "@/pages/Cart";
 import CustomerHub from "@/pages/CustomerHub";
 import FarmerPortal from "@/pages/FarmerPortal";
 import LegalCenter from "@/pages/LegalCenter";
@@ -10,6 +11,7 @@ import Shop from "@/pages/Shop";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { PondShell } from "./components/PondShell";
+import { QueryRecoveryBanner } from "./components/QueryRecoveryBanner";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 
@@ -20,6 +22,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/shop/:id"} component={ProductDetail} />
       <Route path={"/shop"} component={Shop} />
+      <Route path={"/cart"} component={Cart} />
       <Route path={"/orders"} component={CustomerHub} />
       <Route path={"/notifications"} component={CustomerHub} />
       <Route path={"/addresses"} component={CustomerHub} />
@@ -48,6 +51,7 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
+          <QueryRecoveryBanner />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

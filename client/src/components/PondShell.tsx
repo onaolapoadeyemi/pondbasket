@@ -1,11 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
-import { Bell, ClipboardList, House, Menu, Store, UserRound, X } from "lucide-react";
+import { Bell, ClipboardList, House, Menu, ShoppingBasket, Store, UserRound, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { BRAND } from "@shared/brand";
 import { BrandMark } from "./BrandMark";
 import { Button } from "./ui/button";
+import { useCart } from "@/contexts/CartContext";
 
 const nav = [
   { href: "/shop", label: "Shop fish" },
@@ -18,6 +19,7 @@ const nav = [
 
 export function PondShell({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { line } = useCart();
   const [open, setOpen] = useState(false);
   const [location] = useLocation();
   return (
@@ -31,6 +33,7 @@ export function PondShell({ children }: { children: React.ReactNode }) {
           <Link href="/"><BrandMark /></Link>
           <nav className="hidden items-center gap-6 text-sm font-semibold text-[#335e59] lg:flex">
             {nav.slice(0, 3).map(item => <Link key={item.href} href={item.href} className={location === item.href ? "text-[#0b4f4a]" : "transition-colors hover:text-[#0b4f4a]"}>{item.label}</Link>)}
+            <Link href="/cart" className="inline-flex items-center gap-1 transition-colors hover:text-[#0b4f4a]"><ShoppingBasket className="h-4 w-4" />Basket{line ? " · 1" : ""}</Link>
             {user?.role === "farmer" && <Link href="/farm" className="transition-colors hover:text-[#0b4f4a]">Farmer portal</Link>}
             {user?.role === "admin" && <Link href="/admin" className="transition-colors hover:text-[#0b4f4a]">Operations</Link>}
           </nav>
@@ -50,9 +53,8 @@ export function PondShell({ children }: { children: React.ReactNode }) {
       {children}
       <footer className="mt-16 border-t border-[#092b2a]/10 bg-[#092b2a] text-[#f6f4ec]"><div className="container grid gap-8 py-10 sm:grid-cols-[1.3fr_1fr_1fr]"><div><BrandMark compact /><p className="mt-4 max-w-sm text-sm leading-6 text-[#d7e2db]">Fresh catfish and tilapia from verified local farms, for your home table, office kitchen, or next gathering.</p></div><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#d6e46b]">PondBasket</p><div className="mt-4 grid gap-2 text-sm text-[#d7e2db]"><Link href="/shop">Shop fish</Link><Link href="/farm">Sell fish</Link><Link href="/legal">Help & policies</Link></div></div><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#d6e46b]">Pilot service area</p><p className="mt-4 text-sm leading-6 text-[#d7e2db]">{BRAND.activeServiceLocation}<br />Local pickup and configured delivery zones only.</p></div></div><div className="border-t border-white/10 py-4 text-center text-xs text-[#adc5bd]">© {new Date().getFullYear()} {BRAND.name} Demo. {BRAND.legalStatus}</div></footer>
       <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#092b2a]/10 bg-[#f6f4ec] px-2 py-2 shadow-[0_-8px_28px_rgba(9,43,42,.08)] sm:hidden">
-        {[{ href: "/", icon: House, label: "Home" }, { href: "/shop", icon: Store, label: "Shop" }, { href: "/orders", icon: ClipboardList, label: "Orders" }, { href: "/notifications", icon: Bell, label: "Alerts" }].map(({ href, icon: Icon, label }) => <Link key={href} href={href} className={`grid place-items-center gap-1 rounded-xl py-1.5 text-[10px] font-bold ${location === href ? "bg-[#d6e46b] text-[#092b2a]" : "text-[#50736e]"}`}><Icon className="h-4 w-4" />{label}</Link>)}
+        {[{ href: "/", icon: House, label: "Home" }, { href: "/shop", icon: Store, label: "Shop" }, { href: "/cart", icon: ShoppingBasket, label: line ? "Basket · 1" : "Basket" }, { href: "/orders", icon: ClipboardList, label: "Orders" }].map(({ href, icon: Icon, label }) => <Link key={href} href={href} className={`grid place-items-center gap-1 rounded-xl py-1.5 text-[10px] font-bold ${location === href ? "bg-[#d6e46b] text-[#092b2a]" : "text-[#50736e]"}`}><Icon className="h-4 w-4" />{label}</Link>)}
       </div>
     </div>
   );
 }
-

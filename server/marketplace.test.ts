@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertOrderTransition, calculatePricing, maskBankAccount } from "../shared/domain";
+import { assertOrderTransition, calculatePricing, maskBankAccount, FARMER_APPLICATION_STATES } from "../shared/domain";
 import { PRODUCT_SPECIES } from "../shared/brand";
 
 describe("PondBasket pricing integrity", () => {
@@ -15,6 +15,11 @@ describe("PondBasket pricing integrity", () => {
 
   it("rejects non-integer monetary input", () => {
     expect(() => calculatePricing({ unitPriceKobo: 42.5, quantity: 1, commissionRateBps: 1000, deliveryChargeKobo: 0 })).toThrow("integer");
+  });
+
+  it("includes an administrator-enabled buyer fee in the immutable buyer total", () => {
+    const pricing = calculatePricing({ unitPriceKobo: 420000, quantity: 2, commissionRateBps: 1000, deliveryChargeKobo: 130000, buyerServiceFeeKobo: 25000 });
+    expect(pricing).toMatchObject({ subtotalKobo: 840000, buyerServiceFeeKobo: 25000, buyerTotalKobo: 995000, farmerPayoutKobo: 756000 });
   });
 });
 
@@ -33,6 +38,11 @@ describe("PondBasket order state machine", () => {
   it("blocks payout-unsafe transitions from an open dispute", () => {
     expect(() => assertOrderTransition("DISPUTED", "FARMER_ACCEPTED")).toThrow("Illegal order transition");
   });
+
+  it("requires dispatch before customer inspection can release delivery", () => {
+    expect(() => assertOrderTransition("READY", "DELIVERED_PENDING_RELEASE")).toThrow("Illegal order transition");
+    expect(() => assertOrderTransition("DISPATCHED", "DELIVERED_PENDING_RELEASE")).not.toThrow();
+  });
 });
 
 describe("PondBasket catalog boundary", () => {
@@ -45,5 +55,11 @@ describe("PondBasket catalog boundary", () => {
 describe("PondBasket private financial display", () => {
   it("masks all but the final four bank-account digits", () => {
     expect(maskBankAccount("0123456789")).toBe("••••••6789");
+  });
+});
+
+describe("PondBasket farmer onboarding workflow", () => {
+  it("keeps every required farmer verification state available to the application flow", () => {
+    expect(FARMER_APPLICATION_STATES).toEqual(["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SUSPENDED"]);
   });
 });

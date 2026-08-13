@@ -18,6 +18,7 @@ import {
   productImages,
   products,
   serviceZones,
+  users,
   verificationDocuments,
 } from "../drizzle/schema";
 import { BRAND, PRODUCT_SPECIES } from "../shared/brand";
@@ -118,12 +119,19 @@ export const appRouter = router({
       const db = await getDb();
       const liveProducts = db ? await db.select().from(products).where(eq(products.status, "ACTIVE")) : [];
       const applications = db ? await db.select().from(farmerApplications).where(eq(farmerApplications.status, "APPROVED")) : [];
+      const uploadedImages = db && liveProducts.length ? await db.select().from(productImages) : [];
       const applicationById = new Map(applications.map(application => [application.id, application]));
+      const imageUrlsByProduct = new Map<number, string[]>();
+      uploadedImages.forEach(image => {
+        const urls = imageUrlsByProduct.get(image.productId) ?? [];
+        urls.push(image.displayUrl);
+        imageUrlsByProduct.set(image.productId, urls);
+      });
       const records = liveProducts.length ? liveProducts.map(item => {
         const farm = applicationById.get(item.farmerApplicationId);
         return {
           id: item.id, farmerId: item.farmerApplicationId, farmer: farm?.farmName ?? "Verified PondBasket farm", farmerArea: farm?.generalFarmArea ?? "Configured service area", verified: true,
-          species: item.species, form: item.form, processing: item.processing, sizeGrade: item.sizeGrade, unit: item.unit, unitPriceKobo: item.unitPriceKobo, minOrder: item.minOrder, availableQuantity: Math.max(0, item.availableQuantity - item.reservedQuantity), availabilityType: item.availabilityType, availabilityDate: item.availabilityDate ? item.availabilityDate.toLocaleDateString() : item.availabilityType === "available_now" ? "Available now" : item.availabilityType.replaceAll("_", " "), zones: asStringArray(item.zonesJson), fulfillment: asStringArray(item.fulfillmentJson), description: item.description, accent: item.species === "catfish" ? "pond" : "leaf",
+          species: item.species, form: item.form, processing: item.processing, sizeGrade: item.sizeGrade, unit: item.unit, unitPriceKobo: item.unitPriceKobo, minOrder: item.minOrder, availableQuantity: Math.max(0, item.availableQuantity - item.reservedQuantity), availabilityType: item.availabilityType, availabilityDate: item.availabilityDate ? item.availabilityDate.toLocaleDateString() : item.availabilityType === "available_now" ? "Available now" : item.availabilityType.replaceAll("_", " "), zones: asStringArray(item.zonesJson), fulfillment: asStringArray(item.fulfillmentJson), description: item.description, accent: item.species === "catfish" ? "pond" : "leaf", imageUrls: imageUrlsByProduct.get(item.id) ?? [],
         };
       }) : demoCatalog;
       const filtered = records.filter(item =>
@@ -140,8 +148,11 @@ export const appRouter = router({
       return { items: filtered, source: "demo" as const, lastUpdated: new Date() };
     }),
     quote: publicProcedure.input(z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive(), zone: z.string().min(1) })).query(async ({ input }) => {
-      const product = demoCatalog.find(item => item.id === input.productId && item.zones.includes(input.zone));
+      const db = await getDb();
+      const live = db ? await db.select().from(products).where(and(eq(products.id, input.productId), eq(products.status, "ACTIVE"))).limit(1) : [];
+      const product = live[0] ? { ...live[0], zones: asStringArray(live[0].zonesJson), fulfillment: asStringArray(live[0].fulfillmentJson) } : demoCatalog.find(item => item.id === input.productId && item.zones.includes(input.zone));
       if (!product) throw new TRPCError({ code: "NOT_FOUND", message: "This product is not available in the selected service zone." });
+      if (!product.zones.includes(input.zone)) throw new TRPCError({ code: "NOT_FOUND", message: "This product is not available in the selected service zone." });
       if (input.quantity < product.minOrder) throw new TRPCError({ code: "BAD_REQUEST", message: `Minimum order is ${product.minOrder} ${product.unit}.` });
       const commerce = await getCommerceConfig();
       const buyerServiceFeeKobo = commerce.buyerServiceFeeEnabled ? commerce.buyerServiceFeeKobo : 0;
@@ -183,6 +194,35 @@ export const appRouter = router({
       if (!db) return null;
       const application = await db.select().from(farmerApplications).where(eq(farmerApplications.userId, ctx.user.id)).limit(1);
       return application[0] ?? null;
+    }),
+    documents: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const application = await db.select().from(farmerApplications).where(eq(farmerApplications.userId, ctx.user.id)).limit(1);
+      if (!application[0]) return [];
+      return db.select({ id: verificationDocuments.id, originalName: verificationDocuments.originalName, mimeType: verificationDocuments.mimeType, uploadedAt: verificationDocuments.uploadedAt }).from(verificationDocuments).where(eq(verificationDocuments.farmerApplicationId, application[0].id)).orderBy(desc(verificationDocuments.uploadedAt));
+    }),
+    listings: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const application = await db.select().from(farmerApplications).where(eq(farmerApplications.userId, ctx.user.id)).limit(1);
+      if (!application[0]) return [];
+      const listings = await db.select().from(products).where(eq(products.farmerApplicationId, application[0].id)).orderBy(desc(products.createdAt));
+      const images = listings.length ? await db.select().from(productImages) : [];
+      const urlsByListing = new Map<number, string[]>();
+      images.forEach(image => {
+        const urls = urlsByListing.get(image.productId) ?? [];
+        urls.push(image.displayUrl);
+        urlsByListing.set(image.productId, urls);
+      });
+      return listings.map(listing => ({ ...listing, imageUrls: urlsByListing.get(listing.id) ?? [] }));
+    }),
+    orders: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      const application = await db.select().from(farmerApplications).where(and(eq(farmerApplications.userId, ctx.user.id), eq(farmerApplications.status, "APPROVED"))).limit(1);
+      if (!application[0]) return [];
+      return db.select().from(orders).where(eq(orders.farmerApplicationId, application[0].id)).orderBy(desc(orders.createdAt));
     }),
     saveDraft: protectedProcedure.input(z.object({ legalName: z.string().min(2).max(160), farmName: z.string().min(2).max(160), phone: z.string().min(7).max(32), state: z.string().min(2).max(80), lga: z.string().min(2).max(100), generalFarmArea: z.string().min(2).max(160), zones: z.array(z.string().min(2)).min(1).max(8), species: z.array(z.enum(PRODUCT_SPECIES)).min(1).max(2), weeklyCapacityKg: z.number().int().positive().max(100000), fulfillment: z.array(z.enum(["pickup", "farmer_delivery", "platform_delivery"])).min(1), bankName: z.string().min(2).max(100), accountNumber: z.string().regex(/^\d{10}$/), accountName: z.string().min(2).max(160) })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -237,6 +277,16 @@ export const appRouter = router({
       const result = await db.insert(products).values({ farmerApplicationId: application[0].id, ...input, zonesJson: input.zones, fulfillmentJson: input.fulfillment, status: "PENDING_APPROVAL" });
       return { productId: Number(result[0].insertId), status: "PENDING_APPROVAL" as const };
     }),
+    updateListingAvailability: protectedProcedure.input(z.object({ productId: z.number().int().positive(), availableQuantity: z.number().int().nonnegative(), availabilityType: z.enum(["available_now", "scheduled_harvest", "preorder"]) })).mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const application = await db.select().from(farmerApplications).where(and(eq(farmerApplications.userId, ctx.user.id), eq(farmerApplications.status, "APPROVED"))).limit(1);
+      const listing = await db.select().from(products).where(eq(products.id, input.productId)).limit(1);
+      if (!application[0] || listing[0]?.farmerApplicationId !== application[0].id) throw new TRPCError({ code: "FORBIDDEN", message: "Only the approved farmer who owns this listing may update availability." });
+      if (input.availableQuantity < listing[0].reservedQuantity) throw new TRPCError({ code: "CONFLICT", message: "Available quantity cannot be lower than fish already reserved by customers." });
+      await db.update(products).set({ availableQuantity: input.availableQuantity, availabilityType: input.availabilityType }).where(eq(products.id, input.productId));
+      return { success: true };
+    }),
   }),
   orders: router({
     create: protectedProcedure.input(z.object({ productId: z.number().int().positive(), quantity: z.number().int().positive(), addressId: z.number().int().positive(), purpose: z.enum(["home_meal", "office_lunch", "weekend_gathering", "party", "community", "freezer", "home_operator", "other"]), idempotencyKey: z.string().uuid() })).mutation(async ({ ctx, input }) => {
@@ -286,18 +336,24 @@ export const appRouter = router({
       if (!db) return [];
       return db.select().from(orders).where(eq(orders.customerId, profile.id)).orderBy(desc(orders.createdAt));
     }),
+    timeline: protectedProcedure.input(z.object({ orderId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+      const profile = await ensureCustomerProfile(ctx.user.id);
+      const db = await getDb();
+      if (!db) return [];
+      const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.customerId, profile.id))).limit(1);
+      if (!order[0]) throw new TRPCError({ code: "FORBIDDEN", message: "You may only view the timeline for your own order." });
+      return db.select().from(orderEvents).where(eq(orderEvents.orderId, input.orderId)).orderBy(orderEvents.createdAt);
+    }),
     transition: protectedProcedure.input(z.object({ orderId: z.number().int().positive(), to: orderStateSchema, reason: z.string().max(600).optional() })).mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const current = await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
       if (!current[0]) throw new TRPCError({ code: "NOT_FOUND" });
       const order = current[0];
-      if (ctx.user.role === "farmer") {
+      if (ctx.user.role !== "admin") {
         const farmer = await db.select().from(farmerApplications).where(and(eq(farmerApplications.userId, ctx.user.id), eq(farmerApplications.id, order.farmerApplicationId), eq(farmerApplications.status, "APPROVED"))).limit(1);
         if (!farmer[0]) throw new TRPCError({ code: "FORBIDDEN", message: "Only the approved farmer assigned to this order may fulfill it." });
         if (!["FARMER_ACCEPTED", "FARMER_REJECTED", "PREPARING", "READY", "DISPATCHED"].includes(input.to)) throw new TRPCError({ code: "FORBIDDEN" });
-      } else if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only the assigned farmer or an administrator may update fulfillment." });
       }
       assertOrderTransition(order.status as OrderState, input.to);
       let pin: string | undefined;
@@ -354,13 +410,36 @@ export const appRouter = router({
       const [zones, applications, openDisputes] = await Promise.all([db.select({ count: sql<number>`count(*)` }).from(serviceZones), db.select({ count: sql<number>`count(*)` }).from(farmerApplications), db.select({ count: sql<number>`count(*)` }).from(disputes).where(eq(disputes.status, "OPEN"))]);
       return { zones: Number(zones[0]?.count ?? 0), applications: Number(applications[0]?.count ?? 0), pendingProducts: 2, openDisputes: Number(openDisputes[0]?.count ?? 0), payments: "SIMULATED", demoMode: BRAND.demoMode };
     }),
-    applications: adminProcedure.query(async () => { const db = await getDb(); return db ? db.select().from(farmerApplications).orderBy(desc(farmerApplications.createdAt)) : []; }),
-    reviewApplication: adminProcedure.input(z.object({ id: z.number().int().positive(), status: farmerStateSchema, note: z.string().min(2).max(600) })).mutation(async ({ ctx, input }) => { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); await db.update(farmerApplications).set({ status: input.status, reviewerNote: input.note, reviewedAt: new Date() }).where(eq(farmerApplications.id, input.id)); return { success: true }; }),
-    products: adminProcedure.query(async () => { const db = await getDb(); return db ? db.select().from(products).orderBy(desc(products.createdAt)) : []; }),
+    applications: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const applications = await db.select().from(farmerApplications).orderBy(desc(farmerApplications.createdAt));
+      const documents = applications.length ? await db.select().from(verificationDocuments) : [];
+      return applications.map(application => ({ ...application, documents: documents.filter(document => document.farmerApplicationId === application.id).map(document => ({ id: document.id, originalName: document.originalName, mimeType: document.mimeType, uploadedAt: document.uploadedAt })) }));
+    }),
+    reviewApplication: adminProcedure.input(z.object({ id: z.number().int().positive(), status: farmerStateSchema, note: z.string().min(2).max(600) })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const application = await db.select().from(farmerApplications).where(eq(farmerApplications.id, input.id)).limit(1);
+      if (!application[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Farmer application not found." });
+      await db.update(farmerApplications).set({ status: input.status, reviewerNote: input.note, reviewedAt: new Date() }).where(eq(farmerApplications.id, input.id));
+      if (input.status === "APPROVED") await db.update(users).set({ role: "farmer" }).where(eq(users.id, application[0].userId));
+      if (input.status === "APPROVED") await simulateNotification(application[0].userId, "farmer_accepted", "Your farm is approved", "You can now create listings, upload product photos, and manage paid orders.");
+      if (input.status === "REJECTED") await simulateNotification(application[0].userId, "farmer_rejected", "Your application needs changes", input.note);
+      return { success: true };
+    }),
+    products: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const listings = await db.select().from(products).orderBy(desc(products.createdAt));
+      const images = listings.length ? await db.select().from(productImages) : [];
+      return listings.map(listing => ({ ...listing, imageUrls: images.filter(image => image.productId === listing.id).map(image => image.displayUrl) }));
+    }),
     reviewProduct: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["ACTIVE", "INACTIVE", "REJECTED"]), note: z.string().min(2).max(600) })).mutation(async ({ input }) => { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); await db.update(products).set({ status: input.status }).where(eq(products.id, input.id)); return { success: true }; }),
     verificationDocumentUrl: adminProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); const document = await db.select().from(verificationDocuments).where(eq(verificationDocuments.id, input.id)).limit(1); if (!document[0]) throw new TRPCError({ code: "NOT_FOUND" }); const { storageGetSignedUrl } = await import("./storage"); return { url: await storageGetSignedUrl(document[0].storageKey) }; }),
     zones: adminProcedure.query(async () => { const db = await getDb(); return db ? db.select().from(serviceZones) : []; }),
     addZone: adminProcedure.input(z.object({ name: z.string().min(2).max(100), state: z.string().min(2).max(80), city: z.string().min(2).max(100), lga: z.string().min(2).max(100), deliveryChargeKobo: z.number().int().nonnegative(), dailyOrderCapacity: z.number().int().positive(), windows: z.array(z.string().min(2)).min(1) })).mutation(async ({ input }) => { money(input.deliveryChargeKobo); const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); await db.insert(serviceZones).values({ ...input, windowsJson: input.windows }); return { success: true }; }),
+    setZoneActive: adminProcedure.input(z.object({ id: z.number().int().positive(), active: z.boolean() })).mutation(async ({ input }) => { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); await db.update(serviceZones).set({ active: input.active }).where(eq(serviceZones.id, input.id)); return { success: true }; }),
     flags: adminProcedure.query(async () => { const db = await getDb(); return db ? db.select().from(featureFlags) : []; }),
     setFlag: adminProcedure.input(z.object({ key: z.string().min(2).max(80), enabled: z.boolean() })).mutation(async ({ ctx, input }) => { const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" }); await db.insert(featureFlags).values({ key: input.key, enabled: input.enabled, description: `PondBasket feature: ${input.key}`, updatedByUserId: ctx.user.id }).onDuplicateKeyUpdate({ set: { enabled: input.enabled, updatedByUserId: ctx.user.id } }); return { success: true }; }),
     commerce: adminProcedure.query(async () => getCommerceConfig()),
