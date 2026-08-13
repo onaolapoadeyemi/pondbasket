@@ -37,5 +37,5 @@
 - [x] Add behavioral regression coverage for favorite save, remove, and unavailable-listing contracts.
 - [x] Add an in-page mobile-visible favorites control to ProductDetail.
 - [x] Add server-contract favorites regression coverage for save, remove, readback, and unavailable-listing rejection.
-- [ ] Place FavoriteButton directly within ProductDetail page content across breakpoints.
+- [x] Place FavoriteButton directly within ProductDetail page content across breakpoints.
 - [x] Cover customer.favorites saved-listing readback in the direct tRPC regression suite.
