@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1786614551245,
+      "tag": "0000_glamorous_vulcan",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1786614866667,
+      "tag": "0001_illegal_purifiers",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786615972741,
+      "tag": "0002_gigantic_shinko_yamashiro",
+      "breakpoints": true
+    }
+  ]
 }
