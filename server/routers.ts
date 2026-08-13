@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   customerAddresses,
+  customerFavorites,
   customerProfiles,
   dataRightsRequests,
   disputes,
@@ -23,6 +24,7 @@ import {
 } from "../drizzle/schema";
 import { BRAND, PRODUCT_SPECIES } from "../shared/brand";
 import { assertOrderTransition, calculatePricing, maskBankAccount, type OrderState } from "../shared/domain";
+import { canSaveFavorite, favoriteToggleOutcome } from "../shared/favorites";
 import { getDb } from "./db";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -186,6 +188,59 @@ export const appRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.insert(dataRightsRequests).values({ userId: ctx.user.id, ...input });
       return { success: true };
+    }),
+    favoriteIds: protectedProcedure.query(async ({ ctx }) => {
+      const profile = await ensureCustomerProfile(ctx.user.id);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const saved = await db.select({ productId: customerFavorites.productId }).from(customerFavorites).where(eq(customerFavorites.customerId, profile.id));
+      return saved.map(item => item.productId);
+    }),
+    favorites: protectedProcedure.query(async ({ ctx }) => {
+      const profile = await ensureCustomerProfile(ctx.user.id);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const saved = await db.select().from(customerFavorites).where(eq(customerFavorites.customerId, profile.id)).orderBy(desc(customerFavorites.createdAt));
+      if (!saved.length) return { items: [] };
+      const liveProducts = await db.select().from(products).where(eq(products.status, "ACTIVE"));
+      const applications = await db.select().from(farmerApplications).where(eq(farmerApplications.status, "APPROVED"));
+      const uploadedImages = liveProducts.length ? await db.select().from(productImages) : [];
+      const applicationById = new Map(applications.map(application => [application.id, application]));
+      const imageUrlsByProduct = new Map<number, string[]>();
+      uploadedImages.forEach(image => {
+        const urls = imageUrlsByProduct.get(image.productId) ?? [];
+        urls.push(image.displayUrl);
+        imageUrlsByProduct.set(image.productId, urls);
+      });
+      const productById = new Map(liveProducts.map(item => [item.id, item]));
+      const items = saved.flatMap(savedItem => {
+        const item = productById.get(savedItem.productId);
+        if (item) {
+          const farm = applicationById.get(item.farmerApplicationId);
+          return [{
+            id: item.id, farmerId: item.farmerApplicationId, farmer: farm?.farmName ?? "Verified PondBasket farm", farmerArea: farm?.generalFarmArea ?? "Configured service area", verified: true,
+            species: item.species, form: item.form, processing: item.processing, sizeGrade: item.sizeGrade, unit: item.unit, unitPriceKobo: item.unitPriceKobo, minOrder: item.minOrder, availableQuantity: Math.max(0, item.availableQuantity - item.reservedQuantity), availabilityType: item.availabilityType, availabilityDate: item.availabilityDate ? item.availabilityDate.toLocaleDateString() : item.availabilityType === "available_now" ? "Available now" : item.availabilityType.replaceAll("_", " "), zones: asStringArray(item.zonesJson), fulfillment: asStringArray(item.fulfillmentJson), description: item.description, accent: item.species === "catfish" ? "pond" : "leaf", imageUrls: imageUrlsByProduct.get(item.id) ?? [],
+          }];
+        }
+        const demo = demoCatalog.find(product => product.id === savedItem.productId);
+        return demo ? [demo] : [];
+      });
+      return { items };
+    }),
+    toggleFavorite: protectedProcedure.input(z.object({ productId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const profile = await ensureCustomerProfile(ctx.user.id);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const live = await db.select({ id: products.id }).from(products).where(and(eq(products.id, input.productId), eq(products.status, "ACTIVE"))).limit(1);
+      if (!canSaveFavorite(input.productId, live.map(product => product.id), demoCatalog.map(product => product.id))) throw new TRPCError({ code: "NOT_FOUND", message: "This listing is no longer available to save." });
+      const existing = await db.select({ id: customerFavorites.id }).from(customerFavorites).where(and(eq(customerFavorites.customerId, profile.id), eq(customerFavorites.productId, input.productId))).limit(1);
+      const outcome = favoriteToggleOutcome(existing[0]?.id);
+      if (!outcome.saved) {
+        await db.delete(customerFavorites).where(eq(customerFavorites.id, outcome.removeId));
+        return { saved: false };
+      }
+      await db.insert(customerFavorites).values({ customerId: profile.id, productId: input.productId });
+      return { saved: true };
     }),
   }),
   farmer: router({

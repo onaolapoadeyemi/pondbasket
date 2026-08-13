@@ -125,6 +125,16 @@ export const productImages = mysqlTable("productImages", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [uniqueIndex("product_image_slot_unq").on(table.productId, table.position)]);
 
+export const customerFavorites = mysqlTable("customerFavorites", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId").notNull(),
+  productId: int("productId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("customer_favorite_unq").on(table.customerId, table.productId),
+  index("customer_favorites_customer_idx").on(table.customerId, table.createdAt),
+]);
+
 export const orders = mysqlTable("orders", {
   id: int("id").autoincrement().primaryKey(),
   publicCode: varchar("publicCode", { length: 24 }).notNull().unique(),

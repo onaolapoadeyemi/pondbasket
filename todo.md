@@ -31,3 +31,11 @@
 - [x] Push the validated PondBasket project to https://github.com/onaolapoadeyemi/pondbasket.git.
 - [x] Audit the current project for remaining bugs, runtime errors, and build warnings.
 - [x] Remediate critical and high-severity production dependency advisories and validate the upgraded dependency tree.
+- [x] Add customer favorites so signed-in users can save, view, and remove fish listings for later.
+- [x] Add a favorites control to the full product-detail page.
+- [x] Provide visible success and error feedback for favorite save/remove mutations.
+- [x] Add behavioral regression coverage for favorite save, remove, and unavailable-listing contracts.
+- [x] Add an in-page mobile-visible favorites control to ProductDetail.
+- [x] Add server-contract favorites regression coverage for save, remove, readback, and unavailable-listing rejection.
+- [ ] Place FavoriteButton directly within ProductDetail page content across breakpoints.
+- [x] Cover customer.favorites saved-listing readback in the direct tRPC regression suite.

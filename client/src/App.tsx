@@ -5,6 +5,7 @@ import Admin from "@/pages/Admin";
 import Cart from "@/pages/Cart";
 import CustomerHub from "@/pages/CustomerHub";
 import FarmerPortal from "@/pages/FarmerPortal";
+import Favorites from "@/pages/Favorites";
 import LegalCenter from "@/pages/LegalCenter";
 import ProductDetail from "@/pages/ProductDetail";
 import Shop from "@/pages/Shop";
@@ -23,6 +24,7 @@ function Router() {
       <Route path={"/shop/:id"} component={ProductDetail} />
       <Route path={"/shop"} component={Shop} />
       <Route path={"/cart"} component={Cart} />
+      <Route path={"/favorites"} component={Favorites} />
       <Route path={"/orders"} component={CustomerHub} />
       <Route path={"/notifications"} component={CustomerHub} />
       <Route path={"/addresses"} component={CustomerHub} />
