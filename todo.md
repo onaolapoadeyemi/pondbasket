@@ -40,3 +40,4 @@
 - [x] Place FavoriteButton directly within ProductDetail page content across breakpoints.
 - [x] Cover customer.favorites saved-listing readback in the direct tRPC regression suite.
 - [x] Add route-level lazy loading and vendor chunk splitting to remove the oversized production bundle warning.
+- [x] Move all pnpm overrides and patch configuration into pnpm-workspace.yaml and refresh stale browser baseline data.
