@@ -44,7 +44,9 @@ export function useAuth(options?: UseAuthOptions) {
       // backend cookie is cleared by the logout mutation.
       try {
         sessionStorage.removeItem("manus-cookie");
-      } catch {}
+      } catch {
+        // Session storage can be unavailable in privacy-restricted contexts.
+      }
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }

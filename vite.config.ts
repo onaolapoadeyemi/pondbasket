@@ -55,7 +55,7 @@ function writeToLogFile(source: LogSource, entries: unknown[]) {
   const logPath = path.join(LOG_DIR, `${source}.log`);
 
   // Format entries with timestamps
-  const lines = entries.map((entry) => {
+  const lines = entries.map(entry => {
     const ts = new Date().toISOString();
     return `[${ts}] ${JSON.stringify(entry)}`;
   });
@@ -131,7 +131,7 @@ function vitePluginManusDebugCollector(): Plugin {
         }
 
         let body = "";
-        req.on("data", (chunk) => {
+        req.on("data", chunk => {
           body += chunk.toString();
         });
 
@@ -149,7 +149,12 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const plugins = [
+  react(),
+  tailwindcss(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+];
 
 export default defineConfig({
   plugins,
@@ -170,11 +175,23 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
-          if (id.includes("@radix-ui") || id.includes("lucide-react")) return "ui-vendor";
-          if (id.includes("@tanstack") || id.includes("@trpc") || id.includes("superjson")) return "data-vendor";
+          if (id.includes("@radix-ui") || id.includes("lucide-react"))
+            return "ui-vendor";
+          if (
+            id.includes("@tanstack") ||
+            id.includes("@trpc") ||
+            id.includes("superjson")
+          )
+            return "data-vendor";
           if (id.includes("recharts")) return "charts-vendor";
-          if (id.includes("streamdown") || id.includes("mermaid") || id.includes("marked")) return "content-vendor";
-          if (id.includes("react") || id.includes("scheduler")) return "react-vendor";
+          if (
+            id.includes("streamdown") ||
+            id.includes("mermaid") ||
+            id.includes("marked")
+          )
+            return "content-vendor";
+          if (id.includes("react") || id.includes("scheduler"))
+            return "react-vendor";
           return "vendor";
         },
       },

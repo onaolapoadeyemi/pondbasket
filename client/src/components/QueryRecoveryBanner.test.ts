@@ -4,10 +4,19 @@ import { getRecoveryFailure } from "./QueryRecoveryBanner";
 
 describe("getRecoveryFailure", () => {
   it("returns a stable recovery snapshot for a failed query", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const queryKey = ["catalog", "zone", "ajah"];
 
-    await expect(client.fetchQuery({ queryKey, queryFn: async () => { throw new Error("Catalog unavailable"); } })).rejects.toThrow("Catalog unavailable");
+    await expect(
+      client.fetchQuery({
+        queryKey,
+        queryFn: async () => {
+          throw new Error("Catalog unavailable");
+        },
+      })
+    ).rejects.toThrow("Catalog unavailable");
 
     expect(getRecoveryFailure(client)).toEqual({
       key: JSON.stringify(queryKey),

@@ -6,10 +6,14 @@ export const BRAND = {
   legalOperator: "PondBasket Demo Operations",
   supportContact: "support@pondbasket.demo",
   serviceLocation: "Lagos, Nigeria",
-  feeLanguage: "Delivery is shown separately before payment. Buyer service fee is off in Demo Mode.",
-  commissionLanguage: "Farm commissions are calculated from the fish merchandise subtotal.",
-  deliveryLanguage: "Pickup and local delivery are available in configured service zones.",
-  legalStatus: "DRAFT — REQUIRES REVIEW BY QUALIFIED NIGERIAN COUNSEL BEFORE PRODUCTION",
+  feeLanguage:
+    "Delivery is shown separately before payment. Buyer service fee is off in Demo Mode.",
+  commissionLanguage:
+    "Farm commissions are calculated from the fish merchandise subtotal.",
+  deliveryLanguage:
+    "Pickup and local delivery are available in configured service zones.",
+  legalStatus:
+    "DRAFT — REQUIRES REVIEW BY QUALIFIED NIGERIAN COUNSEL BEFORE PRODUCTION",
   demoMode: true,
   colors: {
     ink: "#092B2A",

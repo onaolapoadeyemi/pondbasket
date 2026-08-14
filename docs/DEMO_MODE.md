@@ -6,14 +6,14 @@ Demo Mode is visibly identified throughout the product. All sample farms, partic
 
 ## Operator walkthrough
 
-| Role | Route | Demonstrable action |
-|---|---|---|
-| Customer | `/shop` | Filter listings by zone, species, fish form, and fulfillment method |
-| Customer | `/shop/:id` | Review an item, quantity, delivery disclosure, buyer total, and save an address before reservation |
-| Customer | `/orders` | Review private order records and delivery-status updates |
-| Farmer | `/farm` | Submit an application and inspect the masked bank-account display and verification state |
-| Administrator | `/admin` | Review farmer states, configured zones, server-enforced feature flags, commissions, and buyer-service-fee state |
-| Anyone | `/legal` | View structurally complete draft policy collection with prominent legal-review notice |
+| Role          | Route       | Demonstrable action                                                                                             |
+| ------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| Customer      | `/shop`     | Filter listings by zone, species, fish form, and fulfillment method                                             |
+| Customer      | `/shop/:id` | Review an item, quantity, delivery disclosure, buyer total, and save an address before reservation              |
+| Customer      | `/orders`   | Review private order records and delivery-status updates                                                        |
+| Farmer        | `/farm`     | Submit an application and inspect the masked bank-account display and verification state                        |
+| Administrator | `/admin`    | Review farmer states, configured zones, server-enforced feature flags, commissions, and buyer-service-fee state |
+| Anyone        | `/legal`    | View structurally complete draft policy collection with prominent legal-review notice                           |
 
 ## Safety guarantees implemented in this MVP
 
@@ -22,4 +22,3 @@ The server rejects invalid order transitions, rejects client-supplied prices, st
 ## Known Demo Mode boundaries
 
 External email, SMS, WhatsApp, Paystack, geocoding, identity verification, real phone OTP, and real bank-account-name resolution are intentionally not connected. In-app records and simulated email records demonstrate lifecycle events without representing delivery as real. Production payout automation, cards, prepared meals, customer reviews, and real marketplace transfers remain server-disabled.
-
