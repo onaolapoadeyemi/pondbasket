@@ -47,5 +47,5 @@
 - [x] Upgrade direct development tooling to compatible patched releases and verify the resulting dependency tree, tests, and production build.
 - [x] Add a GitHub Actions dependency-audit workflow that checks production dependency vulnerabilities on pull requests, pushes, and a scheduled cadence.
 - [x] Investigate and stabilize intermittent Vite WebSocket failures in the local screenshot harness without regressing public-preview HMR; repeated local route captures and recent logs confirm the origin-inherited configuration is stable.
-- [ ] Require the GitHub Actions Dependency Audit status check for pull requests targeting the main branch.
-- [ ] Fix the Dependency Audit workflow setup order so pnpm is available before the Node cache is initialized.
+- [x] Require the GitHub Actions Dependency Audit status check for pull requests targeting the main branch.
+- [x] Fix the Dependency Audit workflow setup order so pnpm is available before the Node cache is initialized.
