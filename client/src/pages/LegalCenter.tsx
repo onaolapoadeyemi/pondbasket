@@ -1,5 +1,70 @@
 import { BRAND } from "@shared/brand";
 import { FileWarning, ShieldCheck } from "lucide-react";
-const documents = ["Terms of Service", "Privacy Notice", "Consumer Buyer Terms", "Farmer Agreement", "Supplier and Referral Disclosure", "Protected Payment and Payout Policy", "Refund, Cancellation and Dispute Policy", "Delivery, Inspection and Acceptance Policy", "Food Quality and Product Standards Policy", "Acceptable Use and Prohibited Conduct Policy", "Verification and Marketplace Safety Policy", "Account Deletion and Data Rights", "Cookie and Similar Technologies Notice", "Accessibility Statement", "Contact and Complaints", "Community and Review Policy"];
-export default function LegalCenter() { return <main className="container py-10 sm:py-14"><div className="max-w-3xl"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#177e73]">Help & policies</p><h1 className="font-display mt-3 text-5xl font-bold tracking-[-.07em]">A safer marketplace is a clearer one.</h1><p className="mt-5 text-base leading-7 text-[#52716c]">Find the delivery, inspection, protected-payment, privacy, and dispute documents that guide the PondBasket pilot.</p></div><div className="mt-8 flex gap-3 rounded-[20px] border border-[#c85535]/25 bg-[#f9d8ce] p-5 text-[#84331f]"><FileWarning className="mt-0.5 h-5 w-5 shrink-0" /><p className="text-sm leading-6"><strong>Draft legal material.</strong> {BRAND.legalStatus}. These structural pages do not constitute legal advice or a statement of Nigerian legal compliance.</p></div><div className="mt-7 grid gap-3 sm:grid-cols-2">{documents.map((document, index) => <article key={document} className="rounded-[18px] border border-[#092b2a]/10 bg-white p-5"><div className="flex items-start gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dcefe9]"><ShieldCheck className="h-4 w-4 text-[#177e73]" /></div><div><p className="text-sm font-bold">{document}</p><p className="mt-1 text-xs leading-5 text-[#52716c]">Version 0.1 · Draft · Applies to relevant marketplace participants</p><p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-[#c85535]">Requires qualified review</p></div></div></article>)}</div></main> }
-
+const documents = [
+  "Terms of Service",
+  "Privacy Notice",
+  "Consumer Buyer Terms",
+  "Farmer Agreement",
+  "Supplier and Referral Disclosure",
+  "Protected Payment and Payout Policy",
+  "Refund, Cancellation and Dispute Policy",
+  "Delivery, Inspection and Acceptance Policy",
+  "Food Quality and Product Standards Policy",
+  "Acceptable Use and Prohibited Conduct Policy",
+  "Verification and Marketplace Safety Policy",
+  "Account Deletion and Data Rights",
+  "Cookie and Similar Technologies Notice",
+  "Accessibility Statement",
+  "Contact and Complaints",
+  "Community and Review Policy",
+];
+export default function LegalCenter() {
+  return (
+    <main className="container py-10 sm:py-14">
+      <div className="max-w-3xl">
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-[#177e73]">
+          Help & policies
+        </p>
+        <h1 className="font-display mt-3 text-5xl font-bold tracking-[-.07em]">
+          A safer marketplace is a clearer one.
+        </h1>
+        <p className="mt-5 text-base leading-7 text-[#52716c]">
+          Find the delivery, inspection, protected-payment, privacy, and dispute
+          documents that guide the PondBasket pilot.
+        </p>
+      </div>
+      <div className="mt-8 flex gap-3 rounded-[20px] border border-[#c85535]/25 bg-[#f9d8ce] p-5 text-[#84331f]">
+        <FileWarning className="mt-0.5 h-5 w-5 shrink-0" />
+        <p className="text-sm leading-6">
+          <strong>Draft legal material.</strong> {BRAND.legalStatus}. These
+          structural pages do not constitute legal advice or a statement of
+          Nigerian legal compliance.
+        </p>
+      </div>
+      <div className="mt-7 grid gap-3 sm:grid-cols-2">
+        {documents.map(document => (
+          <article
+            key={document}
+            className="rounded-[18px] border border-[#092b2a]/10 bg-white p-5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dcefe9]">
+                <ShieldCheck className="h-4 w-4 text-[#177e73]" />
+              </div>
+              <div>
+                <p className="text-sm font-bold">{document}</p>
+                <p className="mt-1 text-xs leading-5 text-[#52716c]">
+                  Version 0.1 · Draft · Applies to relevant marketplace
+                  participants
+                </p>
+                <p className="mt-3 text-[10px] font-bold uppercase tracking-[.12em] text-[#c85535]">
+                  Requires qualified review
+                </p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </main>
+  );
+}

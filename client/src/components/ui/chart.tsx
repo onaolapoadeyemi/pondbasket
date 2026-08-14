@@ -117,18 +117,18 @@ function ChartTooltipContent({
   nameKey,
   labelKey,
 }: React.ComponentProps<"div"> & {
-    active?: boolean;
-    payload?: any[];
-    label?: string | number;
-    labelFormatter?: (label: React.ReactNode, payload: any[]) => React.ReactNode;
-    labelClassName?: string;
-    formatter?: (...args: any[]) => React.ReactNode;
-    hideLabel?: boolean;
-    hideIndicator?: boolean;
-    indicator?: "line" | "dot" | "dashed";
-    nameKey?: string;
-    labelKey?: string;
-  }) {
+  active?: boolean;
+  payload?: any[];
+  label?: string | number;
+  labelFormatter?: (label: React.ReactNode, payload: any[]) => React.ReactNode;
+  labelClassName?: string;
+  formatter?: (...args: any[]) => React.ReactNode;
+  hideLabel?: boolean;
+  hideIndicator?: boolean;
+  indicator?: "line" | "dot" | "dashed";
+  nameKey?: string;
+  labelKey?: string;
+}) {
   const { config } = useChart();
 
   const tooltipLabel = React.useMemo(() => {
@@ -261,13 +261,12 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
-}: React.ComponentProps<"div"> &
-  {
-    payload?: any[];
-    verticalAlign?: "top" | "bottom" | "middle";
-    hideIcon?: boolean;
-    nameKey?: string;
-  }) {
+}: React.ComponentProps<"div"> & {
+  payload?: any[];
+  verticalAlign?: "top" | "bottom" | "middle";
+  hideIcon?: boolean;
+  nameKey?: string;
+}) {
   const { config } = useChart();
 
   if (!payload?.length) {

@@ -21,23 +21,33 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <PondShell><Suspense fallback={<main className="container py-14"><div className="h-64 animate-pulse rounded-[30px] bg-[#e8e7dc]" /></main>}><Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/shop/:id"} component={ProductDetail} />
-      <Route path={"/shop"} component={Shop} />
-      <Route path={"/cart"} component={Cart} />
-      <Route path={"/favorites"} component={Favorites} />
-      <Route path={"/orders"} component={CustomerHub} />
-      <Route path={"/notifications"} component={CustomerHub} />
-      <Route path={"/addresses"} component={CustomerHub} />
-      <Route path={"/profile"} component={CustomerHub} />
-      <Route path={"/farm"} component={FarmerPortal} />
-      <Route path={"/admin"} component={Admin} />
-      <Route path={"/legal"} component={LegalCenter} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch></Suspense></PondShell>
+    <PondShell>
+      <Suspense
+        fallback={
+          <main className="container py-14">
+            <div className="h-64 animate-pulse rounded-[30px] bg-[#e8e7dc]" />
+          </main>
+        }
+      >
+        <Switch>
+          <Route path={"/"} component={Home} />
+          <Route path={"/shop/:id"} component={ProductDetail} />
+          <Route path={"/shop"} component={Shop} />
+          <Route path={"/cart"} component={Cart} />
+          <Route path={"/favorites"} component={Favorites} />
+          <Route path={"/orders"} component={CustomerHub} />
+          <Route path={"/notifications"} component={CustomerHub} />
+          <Route path={"/addresses"} component={CustomerHub} />
+          <Route path={"/profile"} component={CustomerHub} />
+          <Route path={"/farm"} component={FarmerPortal} />
+          <Route path={"/admin"} component={Admin} />
+          <Route path={"/legal"} component={LegalCenter} />
+          <Route path={"/404"} component={NotFound} />
+          {/* Final fallback route */}
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    </PondShell>
   );
 }
 

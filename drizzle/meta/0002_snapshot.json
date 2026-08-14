@@ -83,9 +83,7 @@
       "indexes": {
         "addresses_customer_idx": {
           "name": "addresses_customer_idx",
-          "columns": [
-            "customerId"
-          ],
+          "columns": ["customerId"],
           "isUnique": false
         }
       },
@@ -93,9 +91,7 @@
       "compositePrimaryKeys": {
         "customerAddresses_id": {
           "name": "customerAddresses_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -154,17 +150,13 @@
       "compositePrimaryKeys": {
         "customerProfiles_id": {
           "name": "customerProfiles_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "customerProfiles_userId_unique": {
           "name": "customerProfiles_userId_unique",
-          "columns": [
-            "userId"
-          ]
+          "columns": ["userId"]
         }
       },
       "checkConstraint": {}
@@ -222,9 +214,7 @@
       "compositePrimaryKeys": {
         "dataRightsRequests_id": {
           "name": "dataRightsRequests_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -311,17 +301,13 @@
       "compositePrimaryKeys": {
         "disputes_id": {
           "name": "disputes_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "disputes_orderId_unique": {
           "name": "disputes_orderId_unique",
-          "columns": [
-            "orderId"
-          ]
+          "columns": ["orderId"]
         }
       },
       "checkConstraint": {}
@@ -493,17 +479,13 @@
       "compositePrimaryKeys": {
         "farmerApplications_id": {
           "name": "farmerApplications_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "farmerApplications_userId_unique": {
           "name": "farmerApplications_userId_unique",
-          "columns": [
-            "userId"
-          ]
+          "columns": ["userId"]
         }
       },
       "checkConstraint": {}
@@ -562,17 +544,13 @@
       "compositePrimaryKeys": {
         "featureFlags_id": {
           "name": "featureFlags_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "featureFlags_key_unique": {
           "name": "featureFlags_key_unique",
-          "columns": [
-            "key"
-          ]
+          "columns": ["key"]
         }
       },
       "checkConstraint": {}
@@ -620,11 +598,7 @@
       "indexes": {
         "legal_acceptance_unq": {
           "name": "legal_acceptance_unq",
-          "columns": [
-            "userId",
-            "documentType",
-            "documentVersion"
-          ],
+          "columns": ["userId", "documentType", "documentVersion"],
           "isUnique": true
         }
       },
@@ -632,9 +606,7 @@
       "compositePrimaryKeys": {
         "legalAcceptances_id": {
           "name": "legalAcceptances_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -713,10 +685,7 @@
       "indexes": {
         "notifications_user_idx": {
           "name": "notifications_user_idx",
-          "columns": [
-            "userId",
-            "createdAt"
-          ],
+          "columns": ["userId", "createdAt"],
           "isUnique": false
         }
       },
@@ -724,9 +693,7 @@
       "compositePrimaryKeys": {
         "notifications_id": {
           "name": "notifications_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -796,10 +763,7 @@
       "indexes": {
         "order_events_order_idx": {
           "name": "order_events_order_idx",
-          "columns": [
-            "orderId",
-            "createdAt"
-          ],
+          "columns": ["orderId", "createdAt"],
           "isUnique": false
         }
       },
@@ -807,9 +771,7 @@
       "compositePrimaryKeys": {
         "orderEvents_id": {
           "name": "orderEvents_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -931,17 +893,13 @@
       "compositePrimaryKeys": {
         "orderPricingSnapshots_id": {
           "name": "orderPricingSnapshots_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "orderPricingSnapshots_orderId_unique": {
           "name": "orderPricingSnapshots_orderId_unique",
-          "columns": [
-            "orderId"
-          ]
+          "columns": ["orderId"]
         }
       },
       "checkConstraint": {}
@@ -1078,18 +1036,12 @@
       "indexes": {
         "orders_customer_idx": {
           "name": "orders_customer_idx",
-          "columns": [
-            "customerId",
-            "status"
-          ],
+          "columns": ["customerId", "status"],
           "isUnique": false
         },
         "orders_farmer_idx": {
           "name": "orders_farmer_idx",
-          "columns": [
-            "farmerApplicationId",
-            "status"
-          ],
+          "columns": ["farmerApplicationId", "status"],
           "isUnique": false
         }
       },
@@ -1097,23 +1049,17 @@
       "compositePrimaryKeys": {
         "orders_id": {
           "name": "orders_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "orders_publicCode_unique": {
           "name": "orders_publicCode_unique",
-          "columns": [
-            "publicCode"
-          ]
+          "columns": ["publicCode"]
         },
         "orders_idempotencyKey_unique": {
           "name": "orders_idempotencyKey_unique",
-          "columns": [
-            "idempotencyKey"
-          ]
+          "columns": ["idempotencyKey"]
         }
       },
       "checkConstraint": {}
@@ -1194,17 +1140,13 @@
       "compositePrimaryKeys": {
         "payouts_id": {
           "name": "payouts_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "payouts_orderId_unique": {
           "name": "payouts_orderId_unique",
-          "columns": [
-            "orderId"
-          ]
+          "columns": ["orderId"]
         }
       },
       "checkConstraint": {}
@@ -1255,17 +1197,13 @@
       "compositePrimaryKeys": {
         "platformSettings_id": {
           "name": "platformSettings_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "platformSettings_key_unique": {
           "name": "platformSettings_key_unique",
-          "columns": [
-            "key"
-          ]
+          "columns": ["key"]
         }
       },
       "checkConstraint": {}
@@ -1320,10 +1258,7 @@
       "indexes": {
         "product_image_slot_unq": {
           "name": "product_image_slot_unq",
-          "columns": [
-            "productId",
-            "position"
-          ],
+          "columns": ["productId", "position"],
           "isUnique": true
         }
       },
@@ -1331,9 +1266,7 @@
       "compositePrimaryKeys": {
         "productImages_id": {
           "name": "productImages_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1484,17 +1417,12 @@
       "indexes": {
         "products_farmer_idx": {
           "name": "products_farmer_idx",
-          "columns": [
-            "farmerApplicationId"
-          ],
+          "columns": ["farmerApplicationId"],
           "isUnique": false
         },
         "products_species_idx": {
           "name": "products_species_idx",
-          "columns": [
-            "species",
-            "status"
-          ],
+          "columns": ["species", "status"],
           "isUnique": false
         }
       },
@@ -1502,9 +1430,7 @@
       "compositePrimaryKeys": {
         "products_id": {
           "name": "products_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1591,17 +1517,13 @@
       "compositePrimaryKeys": {
         "serviceZones_id": {
           "name": "serviceZones_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "serviceZones_name_unique": {
           "name": "serviceZones_name_unique",
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "checkConstraint": {}
@@ -1683,17 +1605,13 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "users_openId_unique": {
           "name": "users_openId_unique",
-          "columns": [
-            "openId"
-          ]
+          "columns": ["openId"]
         }
       },
       "checkConstraint": {}
@@ -1748,9 +1666,7 @@
       "indexes": {
         "documents_application_idx": {
           "name": "documents_application_idx",
-          "columns": [
-            "farmerApplicationId"
-          ],
+          "columns": ["farmerApplicationId"],
           "isUnique": false
         }
       },
@@ -1758,9 +1674,7 @@
       "compositePrimaryKeys": {
         "verificationDocuments_id": {
           "name": "verificationDocuments_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},

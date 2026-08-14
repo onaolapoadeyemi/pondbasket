@@ -4,47 +4,826 @@ import { Button } from "@/components/ui/button";
 import { formatNgn } from "@/components/ProductCard";
 import { trpc } from "@/lib/trpc";
 import { optimizeListingImage, readFileBase64 } from "@/lib/uploadFile";
-import { CheckCircle2, CircleAlert, FileImage, FileLock2, LandPlot, LoaderCircle, PackagePlus, ShieldCheck, UploadCloud } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  FileImage,
+  FileLock2,
+  LandPlot,
+  LoaderCircle,
+  PackagePlus,
+  ShieldCheck,
+  UploadCloud,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Species = "catfish" | "tilapia";
 type Fulfillment = "pickup" | "farmer_delivery" | "platform_delivery";
-type Form = { legalName: string; farmName: string; phone: string; state: string; lga: string; generalFarmArea: string; weeklyCapacityKg: number; bankName: string; accountNumber: string; accountName: string; zones: string[]; species: Species[]; fulfillment: Fulfillment[] };
-const draft: Form = { legalName: "", farmName: "", phone: "", state: "Lagos", lga: "Eti-Osa", generalFarmArea: "", weeklyCapacityKg: 100, bankName: "", accountNumber: "", accountName: "", zones: ["Ajah"], species: ["catfish"], fulfillment: ["pickup"] };
-const states = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SUSPENDED"];
-const stringList = (value: unknown, fallback: string[]) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : fallback;
-const actions = (status: string) => status === "PAID" ? [{ label: "Accept order", to: "FARMER_ACCEPTED" as const }, { label: "Reject order", to: "FARMER_REJECTED" as const }] : status === "FARMER_ACCEPTED" ? [{ label: "Start preparing", to: "PREPARING" as const }] : status === "PREPARING" ? [{ label: "Mark ready", to: "READY" as const }] : status === "READY" ? [{ label: "Mark dispatched", to: "DISPATCHED" as const }] : [];
+type Form = {
+  legalName: string;
+  farmName: string;
+  phone: string;
+  state: string;
+  lga: string;
+  generalFarmArea: string;
+  weeklyCapacityKg: number;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  zones: string[];
+  species: Species[];
+  fulfillment: Fulfillment[];
+};
+const draft: Form = {
+  legalName: "",
+  farmName: "",
+  phone: "",
+  state: "Lagos",
+  lga: "Eti-Osa",
+  generalFarmArea: "",
+  weeklyCapacityKg: 100,
+  bankName: "",
+  accountNumber: "",
+  accountName: "",
+  zones: ["Ajah"],
+  species: ["catfish"],
+  fulfillment: ["pickup"],
+};
+const states = [
+  "DRAFT",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "REJECTED",
+  "SUSPENDED",
+];
+const stringList = (value: unknown, fallback: string[]) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : fallback;
+const actions = (status: string) =>
+  status === "PAID"
+    ? [
+        { label: "Accept order", to: "FARMER_ACCEPTED" as const },
+        { label: "Reject order", to: "FARMER_REJECTED" as const },
+      ]
+    : status === "FARMER_ACCEPTED"
+      ? [{ label: "Start preparing", to: "PREPARING" as const }]
+      : status === "PREPARING"
+        ? [{ label: "Mark ready", to: "READY" as const }]
+        : status === "READY"
+          ? [{ label: "Mark dispatched", to: "DISPATCHED" as const }]
+          : [];
 
 export default function FarmerPortal() {
   const { isAuthenticated } = useAuth();
-  const application = trpc.farmer.application.useQuery(undefined, { enabled: isAuthenticated });
-  const documents = trpc.farmer.documents.useQuery(undefined, { enabled: isAuthenticated });
-  const listings = trpc.farmer.listings.useQuery(undefined, { enabled: isAuthenticated });
-  const farmerOrders = trpc.farmer.orders.useQuery(undefined, { enabled: isAuthenticated });
-  const [form, setForm] = useState<Form>(draft); const [notice, setNotice] = useState<string | null>(null); const [availability, setAvailability] = useState<Record<number, number>>({});
-  const [listing, setListing] = useState({ species: "catfish" as Species, form: "fresh" as "live" | "fresh" | "frozen", processing: "cleaned" as "whole" | "cleaned" | "cut", sizeGrade: "medium" as "small" | "medium" | "large" | "jumbo", unit: "kg" as "kg" | "piece" | "batch", unitPriceKobo: 420000, minOrder: 2, availableQuantity: 20, availabilityType: "available_now" as "available_now" | "scheduled_harvest" | "preorder", zone: "Ajah", fulfillment: "pickup" as Fulfillment, description: "Freshly harvested fish from our verified Lagos farm, prepared for your selected fulfillment option." });
-  const refresh = () => { application.refetch(); documents.refetch(); listings.refetch(); farmerOrders.refetch(); };
-  const saveDraft = trpc.farmer.saveDraft.useMutation({ onSuccess: () => { setNotice("Your protected draft has been saved."); refresh(); } });
-  const submit = trpc.farmer.submitApplication.useMutation({ onSuccess: () => { setNotice("Application submitted. We will notify you as it moves through review."); refresh(); } });
-  const uploadDocument = trpc.farmer.uploadVerificationDocument.useMutation({ onSuccess: () => { setNotice("Verification document uploaded securely."); documents.refetch(); } });
-  const createListing = trpc.farmer.createListing.useMutation({ onSuccess: () => { setNotice("Listing submitted for administrator approval."); listings.refetch(); } });
-  const uploadImage = trpc.farmer.uploadListingImage.useMutation({ onSuccess: () => { setNotice("Optimized listing image uploaded."); listings.refetch(); } });
-  const updateAvailability = trpc.farmer.updateListingAvailability.useMutation({ onSuccess: () => { setNotice("Listing availability updated."); listings.refetch(); } });
-  const transition = trpc.orders.transition.useMutation({ onSuccess: result => { setNotice(result.demoCustomerPin ? `Demo Mode dispatch complete. Buyer-held PIN: ${result.demoCustomerPin}` : "Order status updated and notifications recorded."); farmerOrders.refetch(); } });
-  const app = application.data; const editable = !app || app.status === "DRAFT" || app.status === "REJECTED"; const approved = app?.status === "APPROVED";
-  const error = saveDraft.error ?? submit.error ?? uploadDocument.error ?? createListing.error ?? uploadImage.error ?? updateAvailability.error ?? transition.error;
+  const application = trpc.farmer.application.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const documents = trpc.farmer.documents.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const listings = trpc.farmer.listings.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const farmerOrders = trpc.farmer.orders.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const [form, setForm] = useState<Form>(draft);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<Record<number, number>>({});
+  const [listing, setListing] = useState({
+    species: "catfish" as Species,
+    form: "fresh" as "live" | "fresh" | "frozen",
+    processing: "cleaned" as "whole" | "cleaned" | "cut",
+    sizeGrade: "medium" as "small" | "medium" | "large" | "jumbo",
+    unit: "kg" as "kg" | "piece" | "batch",
+    unitPriceKobo: 420000,
+    minOrder: 2,
+    availableQuantity: 20,
+    availabilityType: "available_now" as
+      | "available_now"
+      | "scheduled_harvest"
+      | "preorder",
+    zone: "Ajah",
+    fulfillment: "pickup" as Fulfillment,
+    description:
+      "Freshly harvested fish from our verified Lagos farm, prepared for your selected fulfillment option.",
+  });
+  const refresh = () => {
+    application.refetch();
+    documents.refetch();
+    listings.refetch();
+    farmerOrders.refetch();
+  };
+  const saveDraft = trpc.farmer.saveDraft.useMutation({
+    onSuccess: () => {
+      setNotice("Your protected draft has been saved.");
+      refresh();
+    },
+  });
+  const submit = trpc.farmer.submitApplication.useMutation({
+    onSuccess: () => {
+      setNotice(
+        "Application submitted. We will notify you as it moves through review."
+      );
+      refresh();
+    },
+  });
+  const uploadDocument = trpc.farmer.uploadVerificationDocument.useMutation({
+    onSuccess: () => {
+      setNotice("Verification document uploaded securely.");
+      documents.refetch();
+    },
+  });
+  const createListing = trpc.farmer.createListing.useMutation({
+    onSuccess: () => {
+      setNotice("Listing submitted for administrator approval.");
+      listings.refetch();
+    },
+  });
+  const uploadImage = trpc.farmer.uploadListingImage.useMutation({
+    onSuccess: () => {
+      setNotice("Optimized listing image uploaded.");
+      listings.refetch();
+    },
+  });
+  const updateAvailability = trpc.farmer.updateListingAvailability.useMutation({
+    onSuccess: () => {
+      setNotice("Listing availability updated.");
+      listings.refetch();
+    },
+  });
+  const transition = trpc.orders.transition.useMutation({
+    onSuccess: result => {
+      setNotice(
+        result.demoCustomerPin
+          ? `Demo Mode dispatch complete. Buyer-held PIN: ${result.demoCustomerPin}`
+          : "Order status updated and notifications recorded."
+      );
+      farmerOrders.refetch();
+    },
+  });
+  const app = application.data;
+  const editable = !app || app.status === "DRAFT" || app.status === "REJECTED";
+  const approved = app?.status === "APPROVED";
+  const error =
+    saveDraft.error ??
+    submit.error ??
+    uploadDocument.error ??
+    createListing.error ??
+    uploadImage.error ??
+    updateAvailability.error ??
+    transition.error;
 
-  useEffect(() => { if (app && editable) setForm({ legalName: app.legalName, farmName: app.farmName, phone: app.phone, state: app.state, lga: app.lga, generalFarmArea: app.generalFarmArea, weeklyCapacityKg: app.weeklyCapacityKg, bankName: app.bankName, accountNumber: "", accountName: app.resolvedAccountName ?? "", zones: stringList(app.zonesJson, ["Ajah"]), species: stringList(app.speciesJson, ["catfish"]) as Species[], fulfillment: stringList(app.fulfillmentJson, ["pickup"]) as Fulfillment[] }); }, [app, editable]);
-  if (!isAuthenticated) return <main className="container py-16"><div className="mx-auto max-w-xl rounded-[28px] border border-[#092b2a]/10 bg-white p-8 text-center"><LandPlot className="mx-auto h-9 w-9 text-[#177e73]" /><h1 className="font-display mt-5 text-4xl font-bold tracking-[-.06em]">Bring your harvest closer to local tables.</h1><p className="mt-4 text-sm leading-6 text-[#52716c]">Start with a protected farmer application. Only approved farmers can publish listings or receive orders.</p><Button onClick={startLogin} className="mt-7 rounded-full bg-[#0b4f4a]">Sign in to apply</Button></div></main>;
+  useEffect(() => {
+    if (app && editable)
+      setForm({
+        legalName: app.legalName,
+        farmName: app.farmName,
+        phone: app.phone,
+        state: app.state,
+        lga: app.lga,
+        generalFarmArea: app.generalFarmArea,
+        weeklyCapacityKg: app.weeklyCapacityKg,
+        bankName: app.bankName,
+        accountNumber: "",
+        accountName: app.resolvedAccountName ?? "",
+        zones: stringList(app.zonesJson, ["Ajah"]),
+        species: stringList(app.speciesJson, ["catfish"]) as Species[],
+        fulfillment: stringList(app.fulfillmentJson, [
+          "pickup",
+        ]) as Fulfillment[],
+      });
+  }, [app, editable]);
+  if (!isAuthenticated)
+    return (
+      <main className="container py-16">
+        <div className="mx-auto max-w-xl rounded-[28px] border border-[#092b2a]/10 bg-white p-8 text-center">
+          <LandPlot className="mx-auto h-9 w-9 text-[#177e73]" />
+          <h1 className="font-display mt-5 text-4xl font-bold tracking-[-.06em]">
+            Bring your harvest closer to local tables.
+          </h1>
+          <p className="mt-4 text-sm leading-6 text-[#52716c]">
+            Start with a protected farmer application. Only approved farmers can
+            publish listings or receive orders.
+          </p>
+          <Button
+            onClick={startLogin}
+            className="mt-7 rounded-full bg-[#0b4f4a]"
+          >
+            Sign in to apply
+          </Button>
+        </div>
+      </main>
+    );
 
-  const submitApplication = (event: React.FormEvent) => { event.preventDefault(); submit.mutate(form); };
-  return <main className="container py-10 sm:py-14"><div className="grid gap-8 lg:grid-cols-[.76fr_1.24fr]"><aside><p className="text-xs font-bold uppercase tracking-[.16em] text-[#177e73]">Farmer portal</p><h1 className="font-display mt-3 text-5xl font-bold tracking-[-.07em]">Sell with clarity.</h1><p className="mt-5 text-base leading-7 text-[#52716c]">Share catfish and tilapia with nearby households, offices, and group buyers—after verification.</p><div className="mt-8 space-y-4">{[[ShieldCheck, "Verified farm status", "Only approved farmers can publish or receive orders."], [FileLock2, "Private verification", "Documents are accessed only through authorized, time-limited links."], [CheckCircle2, "Transparent pilot economics", "Payout eligibility remains visible in the operational record."]].map(([Icon, title, detail]: any) => <div key={title} className="flex gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dcefe9]"><Icon className="h-4 w-4 text-[#177e73]" /></div><div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-sm leading-5 text-[#52716c]">{detail}</p></div></div>)}</div></aside>
-  <div className="space-y-5">{notice && <div className="flex gap-3 rounded-2xl bg-[#dcefe9] p-4 text-sm text-[#335e59]"><CheckCircle2 className="h-4 w-4 shrink-0 text-[#177e73]" />{notice}</div>}{error && <div className="flex gap-3 rounded-2xl bg-[#f9d8ce] p-4 text-sm text-[#9c3b24]"><CircleAlert className="h-4 w-4 shrink-0" />{error.message}</div>}
-    <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">Farmer verification</p><div className="mt-5 grid gap-2 sm:grid-cols-3">{states.map((state, index) => <div key={state} className={`rounded-xl px-3 py-2 text-[10px] font-bold tracking-wide ${app?.status === state || (!app && state === "DRAFT") ? "bg-[#eff3db] text-[#335e59]" : "bg-[#f6f4ec] text-[#76938e]"}`}>{index < 4 ? `${index + 1}. ` : ""}{state.replaceAll("_", " ")}</div>)}</div>
-      {editable ? <form className="mt-6" onSubmit={submitApplication}><h2 className="font-display text-3xl font-bold tracking-[-.05em]">{app ? "Continue your application." : "Tell us about your farm."}</h2><p className="mt-2 text-sm leading-6 text-[#52716c]">Drafts remain protected. Re-enter the account number each time you save or submit; only its masked form is ever displayed.</p><div className="mt-6 grid gap-3 sm:grid-cols-2">{(["legalName", "farmName", "phone", "generalFarmArea", "bankName", "accountNumber", "accountName"] as const).map(key => <input key={key} required value={form[key]} type={key === "accountNumber" ? "password" : "text"} inputMode={key === "phone" || key === "accountNumber" ? "numeric" : "text"} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} placeholder={key === "accountNumber" && app ? "Re-enter 10-digit account number" : key.replace(/([A-Z])/g, " $1").replace(/^./, char => char.toUpperCase())} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm outline-none ring-[#177e73]/30 focus:ring-2" />)}<input required type="number" min="1" value={form.weeklyCapacityKg} onChange={event => setForm(current => ({ ...current, weeklyCapacityKg: Number(event.target.value) }))} placeholder="Weekly capacity in kg" className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm outline-none" /></div><div className="mt-4 grid gap-2 sm:grid-cols-3">{["Ajah", "Lekki Phase 1", "Chevron"].map(zone => <label key={zone} className="flex items-center gap-2 rounded-xl bg-[#f6f4ec] px-3 py-2.5 text-sm"><input checked={form.zones.includes(zone)} onChange={event => setForm(current => ({ ...current, zones: event.target.checked ? [...current.zones, zone] : current.zones.filter(item => item !== zone) }))} type="checkbox" />{zone}</label>)}</div><div className="mt-6 flex flex-wrap gap-3"><Button type="button" variant="outline" disabled={saveDraft.isPending} onClick={() => saveDraft.mutate(form)} className="rounded-full">{saveDraft.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}Save draft</Button><Button disabled={submit.isPending} className="rounded-full bg-[#0b4f4a]">{submit.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}Submit for review</Button></div></form> : <div className="mt-6"><div className="flex items-start justify-between gap-4"><div><h2 className="font-display text-3xl font-bold tracking-[-.05em]">{app?.farmName}</h2><p className="mt-2 text-sm text-[#52716c]">{app?.generalFarmArea} · {app?.state}</p></div><span className="rounded-full bg-[#eff3db] px-3 py-1.5 text-xs font-bold text-[#335e59]">{app?.status.replaceAll("_", " ")}</span></div><div className="mt-5 grid gap-3 rounded-2xl bg-[#f6f4ec] p-5 text-sm"><p><b>Coverage:</b> {stringList(app?.zonesJson, []).join(", ")}</p><p><b>Account:</b> {app?.bankName} · {app?.maskedAccountNumber}</p><p><b>Review note:</b> {app?.reviewerNote ?? "Awaiting administrator review."}</p></div></div>}</section>
-    <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8"><div className="flex items-start gap-3"><FileLock2 className="mt-1 h-5 w-5 shrink-0 text-[#177e73]" /><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">Private documents</p><h2 className="font-display mt-1 text-2xl font-bold">Verification records</h2><p className="mt-1 text-sm leading-6 text-[#52716c]">Upload a PDF, JPG, or PNG under 2 MB. Administrators can access only a temporary link.</p></div></div>{app && <label className="mt-5 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#177e73]/40 bg-[#eff3db]/50 px-4 py-3 text-sm font-bold text-[#335e59]"><UploadCloud className="h-4 w-4" />{uploadDocument.isPending ? "Uploading securely…" : "Upload verification document"}<input className="hidden" type="file" accept="application/pdf,image/jpeg,image/png" disabled={uploadDocument.isPending} onChange={async event => { const file = event.target.files?.[0]; if (!file || !["application/pdf", "image/jpeg", "image/png"].includes(file.type)) return; uploadDocument.mutate({ filename: file.name, contentType: file.type as "application/pdf" | "image/jpeg" | "image/png", base64: await readFileBase64(file) }); event.target.value = ""; }} /></label>}<div className="mt-4 divide-y divide-[#092b2a]/8">{documents.data?.length ? documents.data.map(document => <div key={document.id} className="flex items-center justify-between gap-3 py-3"><span className="flex min-w-0 items-center gap-2 text-sm font-semibold"><FileImage className="h-4 w-4 shrink-0 text-[#177e73]" />{document.originalName}</span><span className="text-xs text-[#76938e]">Private</span></div>) : <p className="py-4 text-sm text-[#52716c]">No documents uploaded yet.</p>}</div></section>
-    {approved && <><section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8"><div className="flex gap-3"><PackagePlus className="mt-1 h-5 w-5 shrink-0 text-[#177e73]" /><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">New listing</p><h2 className="font-display mt-1 text-2xl font-bold">Publish fish for review.</h2><p className="mt-1 text-sm leading-6 text-[#52716c]">Every listing requires administrator approval before customers can see it.</p></div></div><form className="mt-6" onSubmit={event => { event.preventDefault(); createListing.mutate({ species: listing.species, form: listing.form, processing: listing.processing, sizeGrade: listing.sizeGrade, unit: listing.unit, unitPriceKobo: listing.unitPriceKobo, minOrder: listing.minOrder, availableQuantity: listing.availableQuantity, availabilityType: listing.availabilityType, zones: [listing.zone], fulfillment: [listing.fulfillment], description: listing.description }); }}><div className="grid gap-3 sm:grid-cols-3"><select value={listing.species} onChange={event => setListing({ ...listing, species: event.target.value as Species })} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"><option value="catfish">Catfish</option><option value="tilapia">Tilapia</option></select><select value={listing.form} onChange={event => setListing({ ...listing, form: event.target.value as typeof listing.form })} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"><option value="live">Live</option><option value="fresh">Fresh</option><option value="frozen">Frozen</option></select><select value={listing.processing} onChange={event => setListing({ ...listing, processing: event.target.value as typeof listing.processing })} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"><option value="whole">Whole</option><option value="cleaned">Cleaned</option><option value="cut">Cut</option></select><input type="number" min="1" value={listing.unitPriceKobo} onChange={event => setListing({ ...listing, unitPriceKobo: Number(event.target.value) })} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm" /><input type="number" min="1" value={listing.minOrder} onChange={event => setListing({ ...listing, minOrder: Number(event.target.value) })} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm" /><input type="number" min="0" value={listing.availableQuantity} onChange={event => setListing({ ...listing, availableQuantity: Number(event.target.value) })} className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm" /></div><textarea required minLength={16} maxLength={500} value={listing.description} onChange={event => setListing({ ...listing, description: event.target.value })} className="mt-3 min-h-24 w-full rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm" /><div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f4ec] px-4 py-3"><span className="text-sm font-bold">Buyer price</span><span className="font-display text-xl font-bold">{formatNgn(listing.unitPriceKobo)} / {listing.unit}</span></div><Button disabled={createListing.isPending} className="mt-5 rounded-full bg-[#0b4f4a]">Submit listing for approval</Button></form></section>
-      <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">Your catalog</p><h2 className="font-display mt-2 text-2xl font-bold">Listings & availability</h2><div className="mt-5 grid gap-4">{listings.data?.length ? listings.data.map(item => <article key={item.id} className="rounded-2xl bg-[#f6f4ec] p-4"><div className="flex flex-col gap-4 sm:flex-row sm:justify-between"><div><p className="font-display text-xl font-bold capitalize">{item.species} · {item.processing}</p><p className="mt-1 text-sm text-[#52716c]">{formatNgn(item.unitPriceKobo)} / {item.unit} · {item.status.replaceAll("_", " ")}</p></div><label className="flex h-fit cursor-pointer items-center gap-2 rounded-full bg-[#dcefe9] px-3 py-2 text-xs font-bold text-[#335e59]"><UploadCloud className="h-3.5 w-3.5" />Photo {item.imageUrls.length}/3<input className="hidden" type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadImage.isPending || item.imageUrls.length >= 3} onChange={async event => { const file = event.target.files?.[0]; if (!file) return; uploadImage.mutate({ productId: item.id, ...(await optimizeListingImage(file)) }); event.target.value = ""; }} /></label></div>{item.imageUrls.length > 0 && <div className="mt-4 flex gap-2 overflow-x-auto">{item.imageUrls.map(url => <img key={url} src={url} alt={`${item.species} listing`} className="h-20 w-24 rounded-xl object-cover" />)}</div>}<div className="mt-4 flex flex-wrap items-center gap-3"><input type="number" min={item.reservedQuantity} value={availability[item.id] ?? item.availableQuantity} onChange={event => setAvailability({ ...availability, [item.id]: Number(event.target.value) })} className="w-28 rounded-xl bg-white px-3 py-2 text-sm" /><Button type="button" variant="outline" disabled={updateAvailability.isPending} onClick={() => updateAvailability.mutate({ productId: item.id, availableQuantity: availability[item.id] ?? item.availableQuantity, availabilityType: item.availabilityType })} className="rounded-full">Update availability</Button></div></article>) : <p className="rounded-2xl bg-[#f6f4ec] p-5 text-sm text-[#52716c]">Your approved account has no listings yet.</p>}</div></section>
-      <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">Order desk</p><h2 className="font-display mt-2 text-2xl font-bold">Respond and fulfill.</h2><p className="mt-1 text-sm leading-6 text-[#52716c]">Dispatch creates a buyer-held Demo Mode PIN. Customers inspect fish before revealing it.</p><div className="mt-5 grid gap-4">{farmerOrders.data?.length ? farmerOrders.data.map(order => <article key={order.id} className="rounded-2xl bg-[#f6f4ec] p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-display text-xl font-bold">{order.publicCode}</p><p className="mt-1 text-sm text-[#52716c]">{order.quantity} unit(s) · {order.serviceZone}</p></div><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-[#52716c]">{order.status.replaceAll("_", " ")}</span></div><div className="mt-4 flex flex-wrap gap-2">{actions(order.status).map(action => <Button key={action.to} type="button" variant={action.to === "FARMER_REJECTED" ? "outline" : "default"} disabled={transition.isPending} onClick={() => transition.mutate({ orderId: order.id, to: action.to, reason: `Farmer action: ${action.label}.` })} className={action.to === "FARMER_REJECTED" ? "rounded-full text-[#9c3b24]" : "rounded-full bg-[#0b4f4a]"}>{action.label}</Button>)}</div></article>) : <p className="rounded-2xl bg-[#f6f4ec] p-5 text-sm text-[#52716c]">Paid orders assigned to your farm will appear here.</p>}</div></section></>}
-  </div></div></main>;
+  const submitApplication = (event: React.FormEvent) => {
+    event.preventDefault();
+    submit.mutate(form);
+  };
+  return (
+    <main className="container py-10 sm:py-14">
+      <div className="grid gap-8 lg:grid-cols-[.76fr_1.24fr]">
+        <aside>
+          <p className="text-xs font-bold uppercase tracking-[.16em] text-[#177e73]">
+            Farmer portal
+          </p>
+          <h1 className="font-display mt-3 text-5xl font-bold tracking-[-.07em]">
+            Sell with clarity.
+          </h1>
+          <p className="mt-5 text-base leading-7 text-[#52716c]">
+            Share catfish and tilapia with nearby households, offices, and group
+            buyers—after verification.
+          </p>
+          <div className="mt-8 space-y-4">
+            {[
+              [
+                ShieldCheck,
+                "Verified farm status",
+                "Only approved farmers can publish or receive orders.",
+              ],
+              [
+                FileLock2,
+                "Private verification",
+                "Documents are accessed only through authorized, time-limited links.",
+              ],
+              [
+                CheckCircle2,
+                "Transparent pilot economics",
+                "Payout eligibility remains visible in the operational record.",
+              ],
+            ].map(([Icon, title, detail]: any) => (
+              <div key={title} className="flex gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#dcefe9]">
+                  <Icon className="h-4 w-4 text-[#177e73]" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">{title}</p>
+                  <p className="mt-1 text-sm leading-5 text-[#52716c]">
+                    {detail}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+        <div className="space-y-5">
+          {notice && (
+            <div className="flex gap-3 rounded-2xl bg-[#dcefe9] p-4 text-sm text-[#335e59]">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#177e73]" />
+              {notice}
+            </div>
+          )}
+          {error && (
+            <div className="flex gap-3 rounded-2xl bg-[#f9d8ce] p-4 text-sm text-[#9c3b24]">
+              <CircleAlert className="h-4 w-4 shrink-0" />
+              {error.message}
+            </div>
+          )}
+          <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8">
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
+              Farmer verification
+            </p>
+            <div className="mt-5 grid gap-2 sm:grid-cols-3">
+              {states.map((state, index) => (
+                <div
+                  key={state}
+                  className={`rounded-xl px-3 py-2 text-[10px] font-bold tracking-wide ${app?.status === state || (!app && state === "DRAFT") ? "bg-[#eff3db] text-[#335e59]" : "bg-[#f6f4ec] text-[#76938e]"}`}
+                >
+                  {index < 4 ? `${index + 1}. ` : ""}
+                  {state.replaceAll("_", " ")}
+                </div>
+              ))}
+            </div>
+            {editable ? (
+              <form className="mt-6" onSubmit={submitApplication}>
+                <h2 className="font-display text-3xl font-bold tracking-[-.05em]">
+                  {app
+                    ? "Continue your application."
+                    : "Tell us about your farm."}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#52716c]">
+                  Drafts remain protected. Re-enter the account number each time
+                  you save or submit; only its masked form is ever displayed.
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      "legalName",
+                      "farmName",
+                      "phone",
+                      "generalFarmArea",
+                      "bankName",
+                      "accountNumber",
+                      "accountName",
+                    ] as const
+                  ).map(key => (
+                    <input
+                      key={key}
+                      required
+                      value={form[key]}
+                      type={key === "accountNumber" ? "password" : "text"}
+                      inputMode={
+                        key === "phone" || key === "accountNumber"
+                          ? "numeric"
+                          : "text"
+                      }
+                      onChange={event =>
+                        setForm(current => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
+                      placeholder={
+                        key === "accountNumber" && app
+                          ? "Re-enter 10-digit account number"
+                          : key
+                              .replace(/([A-Z])/g, " $1")
+                              .replace(/^./, char => char.toUpperCase())
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm outline-none ring-[#177e73]/30 focus:ring-2"
+                    />
+                  ))}
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    value={form.weeklyCapacityKg}
+                    onChange={event =>
+                      setForm(current => ({
+                        ...current,
+                        weeklyCapacityKg: Number(event.target.value),
+                      }))
+                    }
+                    placeholder="Weekly capacity in kg"
+                    className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm outline-none"
+                  />
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {["Ajah", "Lekki Phase 1", "Chevron"].map(zone => (
+                    <label
+                      key={zone}
+                      className="flex items-center gap-2 rounded-xl bg-[#f6f4ec] px-3 py-2.5 text-sm"
+                    >
+                      <input
+                        checked={form.zones.includes(zone)}
+                        onChange={event =>
+                          setForm(current => ({
+                            ...current,
+                            zones: event.target.checked
+                              ? [...current.zones, zone]
+                              : current.zones.filter(item => item !== zone),
+                          }))
+                        }
+                        type="checkbox"
+                      />
+                      {zone}
+                    </label>
+                  ))}
+                </div>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={saveDraft.isPending}
+                    onClick={() => saveDraft.mutate(form)}
+                    className="rounded-full"
+                  >
+                    {saveDraft.isPending && (
+                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Save draft
+                  </Button>
+                  <Button
+                    disabled={submit.isPending}
+                    className="rounded-full bg-[#0b4f4a]"
+                  >
+                    {submit.isPending && (
+                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Submit for review
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="mt-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="font-display text-3xl font-bold tracking-[-.05em]">
+                      {app?.farmName}
+                    </h2>
+                    <p className="mt-2 text-sm text-[#52716c]">
+                      {app?.generalFarmArea} · {app?.state}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[#eff3db] px-3 py-1.5 text-xs font-bold text-[#335e59]">
+                    {app?.status.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <div className="mt-5 grid gap-3 rounded-2xl bg-[#f6f4ec] p-5 text-sm">
+                  <p>
+                    <b>Coverage:</b> {stringList(app?.zonesJson, []).join(", ")}
+                  </p>
+                  <p>
+                    <b>Account:</b> {app?.bankName} · {app?.maskedAccountNumber}
+                  </p>
+                  <p>
+                    <b>Review note:</b>{" "}
+                    {app?.reviewerNote ?? "Awaiting administrator review."}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+          <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8">
+            <div className="flex items-start gap-3">
+              <FileLock2 className="mt-1 h-5 w-5 shrink-0 text-[#177e73]" />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
+                  Private documents
+                </p>
+                <h2 className="font-display mt-1 text-2xl font-bold">
+                  Verification records
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-[#52716c]">
+                  Upload a PDF, JPG, or PNG under 2 MB. Administrators can
+                  access only a temporary link.
+                </p>
+              </div>
+            </div>
+            {app && (
+              <label className="mt-5 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#177e73]/40 bg-[#eff3db]/50 px-4 py-3 text-sm font-bold text-[#335e59]">
+                <UploadCloud className="h-4 w-4" />
+                {uploadDocument.isPending
+                  ? "Uploading securely…"
+                  : "Upload verification document"}
+                <input
+                  className="hidden"
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  disabled={uploadDocument.isPending}
+                  onChange={async event => {
+                    const file = event.target.files?.[0];
+                    if (
+                      !file ||
+                      !["application/pdf", "image/jpeg", "image/png"].includes(
+                        file.type
+                      )
+                    )
+                      return;
+                    uploadDocument.mutate({
+                      filename: file.name,
+                      contentType: file.type as
+                        | "application/pdf"
+                        | "image/jpeg"
+                        | "image/png",
+                      base64: await readFileBase64(file),
+                    });
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+            <div className="mt-4 divide-y divide-[#092b2a]/8">
+              {documents.data?.length ? (
+                documents.data.map(document => (
+                  <div
+                    key={document.id}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      <FileImage className="h-4 w-4 shrink-0 text-[#177e73]" />
+                      {document.originalName}
+                    </span>
+                    <span className="text-xs text-[#76938e]">Private</span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-4 text-sm text-[#52716c]">
+                  No documents uploaded yet.
+                </p>
+              )}
+            </div>
+          </section>
+          {approved && (
+            <>
+              <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8">
+                <div className="flex gap-3">
+                  <PackagePlus className="mt-1 h-5 w-5 shrink-0 text-[#177e73]" />
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
+                      New listing
+                    </p>
+                    <h2 className="font-display mt-1 text-2xl font-bold">
+                      Publish fish for review.
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-[#52716c]">
+                      Every listing requires administrator approval before
+                      customers can see it.
+                    </p>
+                  </div>
+                </div>
+                <form
+                  className="mt-6"
+                  onSubmit={event => {
+                    event.preventDefault();
+                    createListing.mutate({
+                      species: listing.species,
+                      form: listing.form,
+                      processing: listing.processing,
+                      sizeGrade: listing.sizeGrade,
+                      unit: listing.unit,
+                      unitPriceKobo: listing.unitPriceKobo,
+                      minOrder: listing.minOrder,
+                      availableQuantity: listing.availableQuantity,
+                      availabilityType: listing.availabilityType,
+                      zones: [listing.zone],
+                      fulfillment: [listing.fulfillment],
+                      description: listing.description,
+                    });
+                  }}
+                >
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <select
+                      value={listing.species}
+                      onChange={event =>
+                        setListing({
+                          ...listing,
+                          species: event.target.value as Species,
+                        })
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                    >
+                      <option value="catfish">Catfish</option>
+                      <option value="tilapia">Tilapia</option>
+                    </select>
+                    <select
+                      value={listing.form}
+                      onChange={event =>
+                        setListing({
+                          ...listing,
+                          form: event.target.value as typeof listing.form,
+                        })
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                    >
+                      <option value="live">Live</option>
+                      <option value="fresh">Fresh</option>
+                      <option value="frozen">Frozen</option>
+                    </select>
+                    <select
+                      value={listing.processing}
+                      onChange={event =>
+                        setListing({
+                          ...listing,
+                          processing: event.target
+                            .value as typeof listing.processing,
+                        })
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                    >
+                      <option value="whole">Whole</option>
+                      <option value="cleaned">Cleaned</option>
+                      <option value="cut">Cut</option>
+                    </select>
+                    <input
+                      type="number"
+                      min="1"
+                      value={listing.unitPriceKobo}
+                      onChange={event =>
+                        setListing({
+                          ...listing,
+                          unitPriceKobo: Number(event.target.value),
+                        })
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={listing.minOrder}
+                      onChange={event =>
+                        setListing({
+                          ...listing,
+                          minOrder: Number(event.target.value),
+                        })
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={listing.availableQuantity}
+                      onChange={event =>
+                        setListing({
+                          ...listing,
+                          availableQuantity: Number(event.target.value),
+                        })
+                      }
+                      className="rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                    />
+                  </div>
+                  <textarea
+                    required
+                    minLength={16}
+                    maxLength={500}
+                    value={listing.description}
+                    onChange={event =>
+                      setListing({
+                        ...listing,
+                        description: event.target.value,
+                      })
+                    }
+                    className="mt-3 min-h-24 w-full rounded-xl bg-[#f6f4ec] px-3 py-3 text-sm"
+                  />
+                  <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f6f4ec] px-4 py-3">
+                    <span className="text-sm font-bold">Buyer price</span>
+                    <span className="font-display text-xl font-bold">
+                      {formatNgn(listing.unitPriceKobo)} / {listing.unit}
+                    </span>
+                  </div>
+                  <Button
+                    disabled={createListing.isPending}
+                    className="mt-5 rounded-full bg-[#0b4f4a]"
+                  >
+                    Submit listing for approval
+                  </Button>
+                </form>
+              </section>
+              <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8">
+                <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
+                  Your catalog
+                </p>
+                <h2 className="font-display mt-2 text-2xl font-bold">
+                  Listings & availability
+                </h2>
+                <div className="mt-5 grid gap-4">
+                  {listings.data?.length ? (
+                    listings.data.map(item => (
+                      <article
+                        key={item.id}
+                        className="rounded-2xl bg-[#f6f4ec] p-4"
+                      >
+                        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
+                          <div>
+                            <p className="font-display text-xl font-bold capitalize">
+                              {item.species} · {item.processing}
+                            </p>
+                            <p className="mt-1 text-sm text-[#52716c]">
+                              {formatNgn(item.unitPriceKobo)} / {item.unit} ·{" "}
+                              {item.status.replaceAll("_", " ")}
+                            </p>
+                          </div>
+                          <label className="flex h-fit cursor-pointer items-center gap-2 rounded-full bg-[#dcefe9] px-3 py-2 text-xs font-bold text-[#335e59]">
+                            <UploadCloud className="h-3.5 w-3.5" />
+                            Photo {item.imageUrls.length}/3
+                            <input
+                              className="hidden"
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              disabled={
+                                uploadImage.isPending ||
+                                item.imageUrls.length >= 3
+                              }
+                              onChange={async event => {
+                                const file = event.target.files?.[0];
+                                if (!file) return;
+                                uploadImage.mutate({
+                                  productId: item.id,
+                                  ...(await optimizeListingImage(file)),
+                                });
+                                event.target.value = "";
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {item.imageUrls.length > 0 && (
+                          <div className="mt-4 flex gap-2 overflow-x-auto">
+                            {item.imageUrls.map(url => (
+                              <img
+                                key={url}
+                                src={url}
+                                alt={`${item.species} listing`}
+                                className="h-20 w-24 rounded-xl object-cover"
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-4 flex flex-wrap items-center gap-3">
+                          <input
+                            type="number"
+                            min={item.reservedQuantity}
+                            value={
+                              availability[item.id] ?? item.availableQuantity
+                            }
+                            onChange={event =>
+                              setAvailability({
+                                ...availability,
+                                [item.id]: Number(event.target.value),
+                              })
+                            }
+                            className="w-28 rounded-xl bg-white px-3 py-2 text-sm"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={updateAvailability.isPending}
+                            onClick={() =>
+                              updateAvailability.mutate({
+                                productId: item.id,
+                                availableQuantity:
+                                  availability[item.id] ??
+                                  item.availableQuantity,
+                                availabilityType: item.availabilityType,
+                              })
+                            }
+                            className="rounded-full"
+                          >
+                            Update availability
+                          </Button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="rounded-2xl bg-[#f6f4ec] p-5 text-sm text-[#52716c]">
+                      Your approved account has no listings yet.
+                    </p>
+                  )}
+                </div>
+              </section>
+              <section className="rounded-[28px] border border-[#092b2a]/10 bg-white p-6 sm:p-8">
+                <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
+                  Order desk
+                </p>
+                <h2 className="font-display mt-2 text-2xl font-bold">
+                  Respond and fulfill.
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-[#52716c]">
+                  Dispatch creates a buyer-held Demo Mode PIN. Customers inspect
+                  fish before revealing it.
+                </p>
+                <div className="mt-5 grid gap-4">
+                  {farmerOrders.data?.length ? (
+                    farmerOrders.data.map(order => (
+                      <article
+                        key={order.id}
+                        className="rounded-2xl bg-[#f6f4ec] p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-display text-xl font-bold">
+                              {order.publicCode}
+                            </p>
+                            <p className="mt-1 text-sm text-[#52716c]">
+                              {order.quantity} unit(s) · {order.serviceZone}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-[#52716c]">
+                            {order.status.replaceAll("_", " ")}
+                          </span>
+                        </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {actions(order.status).map(action => (
+                            <Button
+                              key={action.to}
+                              type="button"
+                              variant={
+                                action.to === "FARMER_REJECTED"
+                                  ? "outline"
+                                  : "default"
+                              }
+                              disabled={transition.isPending}
+                              onClick={() =>
+                                transition.mutate({
+                                  orderId: order.id,
+                                  to: action.to,
+                                  reason: `Farmer action: ${action.label}.`,
+                                })
+                              }
+                              className={
+                                action.to === "FARMER_REJECTED"
+                                  ? "rounded-full text-[#9c3b24]"
+                                  : "rounded-full bg-[#0b4f4a]"
+                              }
+                            >
+                              {action.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="rounded-2xl bg-[#f6f4ec] p-5 text-sm text-[#52716c]">
+                      Paid orders assigned to your farm will appear here.
+                    </p>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+        </div>
+      </div>
+    </main>
+  );
 }

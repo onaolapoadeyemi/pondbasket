@@ -1,49 +1,118 @@
 # PondBasket
 
-**PondBasket** is an independent, consumer-facing Demo Mode marketplace for verified local farms to sell only **catfish** and **tilapia** in defined Nigerian service zones. It is deliberately separate from any business-procurement product and is not configured to accept real money.
+PondBasket is a mobile-first **Demo Mode** marketplace for fresh catfish and tilapia from verified local farms in defined Nigerian service zones. It supports customer, farmer, and administrator roles, but deliberately excludes real payments, bank transfers, and production notifications.
 
-## Demo Mode scope
+> **Demo Mode only.** Listings, payments, notifications, and operational data are fictional. Do not enter real bank, payment, identity, or legal data without the necessary production approvals.
 
-| Capability | Demo Mode implementation | Production status |
-|---|---|---|
-| Customer accounts and private addresses | Account-authenticated customer profile and address procedures | Requires phone/SMS provider for phone-first verification |
-| Farmer verification | Structured DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED / REJECTED / SUSPENDED workflow | Requires identity, account-name, and legal-review controls |
-| Catalog | Approved catfish and tilapia listings, zone-aware discovery, filters, quantity and processing details | Ready for controlled data onboarding |
-| Checkout | Integer-kobo authoritative pricing, single-farmer cart boundary, atomic stock reservation and immutable pricing snapshot | Uses `MockPaymentProvider` workflow only |
-| Fulfillment | Server-controlled order transitions, buyer-held hashed delivery PIN, delivery confirmation and disputes | Requires real delivery operations and independent identity checks |
-| Notifications | In-app records plus explicit simulated email records | Requires approved email, SMS, and/or WhatsApp providers |
-| Payouts | Pilot payout eligibility and administrator-recorded payout workflow | Automatic payouts remain disabled |
+## Technology
 
-## Architecture
+| Area                 | Implementation                                       |
+| -------------------- | ---------------------------------------------------- |
+| Client               | React 19, TypeScript, Tailwind CSS 4, Vite           |
+| Server               | Express 5 and tRPC 11                                |
+| Data                 | Drizzle ORM with a MySQL-compatible database         |
+| Identity and storage | Manus OAuth and S3-backed file storage helpers       |
+| Quality              | ESLint, Prettier, Vitest, TypeScript, GitHub Actions |
 
-The project uses a TypeScript React client, Express/tRPC server, Drizzle ORM, and a managed MySQL-compatible database. The application is organized as a modular monolith: the shared domain module owns integer-kobo calculation, transition rules, and account masking; routers enforce identity and role boundaries; the database persists auditable marketplace records; and server storage integrates with the preconfigured S3-backed storage helper for farmer uploads.
+## Prerequisites
 
-| Layer | Responsibilities |
-|---|---|
-| `shared/brand.ts` | The authoritative product identity, Demo Mode state, service language, colors, and default commerce configuration |
-| `shared/domain.ts` | Integer-kobo pricing, commission rounding, legal order transitions, and account masking |
-| `drizzle/schema.ts` | Normalized profiles, addresses, applications, service zones, products, orders, snapshots, events, notifications, disputes, payouts, feature flags, legal acceptances, and data-rights requests |
-| `server/routers.ts` | Validated and authorized marketplace procedures, including checkout, mock payment confirmation, delivery confirmation, disputes, operational settings, and storage upload |
-| `client/src/pages/` | Responsive storefront, checkout, customer, farmer, administrator, and legal-policy experiences |
-
-## Run and validate
+Use **Node.js 22** and the pnpm version declared in `package.json`. The repository locks dependencies with `pnpm-lock.yaml`; keep it committed whenever dependencies change.
 
 ```bash
-pnpm check
-pnpm test
-pnpm build
+git clone https://github.com/onaolapoadeyemi/pondbasket.git
+cd pondbasket
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The project includes clearly fictional farmers, customers, addresses, products, orders, an open dispute, a payout-eligible order, and simulated notifications. Do not replace them with real identities, bank details, addresses, payment data, or legal assertions without the appropriate approvals.
+The development server starts on the platform-assigned port. Open the local preview URL shown by the development command.
 
-## Demo walkthrough
+## Environment and local services
 
-Start at **Shop fish**, select a zone, and open a listing. The checkout displays an authoritative quote. An authenticated customer with a saved address can reserve the inventory with an idempotency key, complete an explicitly labeled mock payment, and observe the order’s protected-payment status. An approved farmer progresses the order through fulfillment states. At dispatch, the server creates a one-time, expiring, hashed delivery PIN. The customer confirms delivery after inspection or opens a dispute; an open dispute blocks a payout record.
+PondBasket expects a MySQL-compatible database plus OAuth and storage configuration. In the managed project environment, these values are injected automatically. For a standalone deployment, provide the equivalent server-side configuration securely through the hosting provider rather than committing an `.env` file.
+
+| Configuration area  | Purpose                                               |
+| ------------------- | ----------------------------------------------------- |
+| Database            | Marketplace data, orders, audit events, and favorites |
+| OAuth               | User authentication and session handling              |
+| Object storage      | Product photos and private farmer verification files  |
+| Application secrets | Session signing and server-to-server API access       |
+
+Review `server/_core/env.ts`, `server/_core/oauth.ts`, and `server/storage.ts` before configuring a non-managed environment. Run schema migrations only against the intended database after reviewing generated SQL.
+
+```bash
+pnpm drizzle-kit generate
+# Review the migration SQL, then apply it through the approved database workflow.
+```
+
+## Common commands
+
+| Command                               | Purpose                                            |
+| ------------------------------------- | -------------------------------------------------- |
+| `pnpm dev`                            | Start the local development server and Vite client |
+| `pnpm lint`                           | Run ESLint with zero warnings allowed              |
+| `pnpm format:check`                   | Verify Prettier formatting without changing files  |
+| `pnpm format`                         | Apply Prettier formatting                          |
+| `pnpm check`                          | Run TypeScript type checking                       |
+| `pnpm test`                           | Run the Vitest suite                               |
+| `pnpm build`                          | Build the browser bundle and server entry point    |
+| `pnpm audit --prod --audit-level=low` | Audit production dependencies                      |
+
+## Validation standard
+
+Before opening a pull request, run:
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm check
+pnpm test
+pnpm build
+pnpm audit --prod --audit-level=low
+```
+
+GitHub Actions enforces two separate checks on pull requests and `main`:
+
+| Check                | Gate                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| **Build and Test**   | Formatting, linting, TypeScript, tests, and production build                          |
+| **Dependency Audit** | All production vulnerabilities and high/critical findings across the dependency graph |
+
+The `main` branch is protected: the successful **Audit dependencies** and **Build and test** jobs are required before merge, administrators are included, branches must be current, and force pushes or deletion are blocked.
+
+## Marketplace architecture
+
+| Path                 | Responsibility                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| `shared/brand.ts`    | Product identity, Demo Mode state, colors, and marketplace defaults                  |
+| `shared/domain.ts`   | Integer-kobo pricing, commission calculations, transition rules, and account masking |
+| `drizzle/schema.ts`  | Normalized marketplace tables and constraints                                        |
+| `server/routers.ts`  | Authenticated and role-gated tRPC marketplace procedures                             |
+| `client/src/pages/`  | Storefront, customer hub, farmer portal, admin console, and policy views             |
+| `.github/workflows/` | Dependency audit and build-and-test CI quality gates                                 |
+
+The catalog is intentionally limited to **catfish** and **tilapia**. Monetary values remain integer kobo from quote to immutable order snapshot. Customer carts remain limited to one farmer, and delivery completion requires the buyer-controlled PIN.
+
+## Deployment guidance
+
+**Recommended: use the project’s built-in hosting and publish from the project interface.** It is already aligned with the managed database, OAuth, storage, and platform secrets. Before launch, complete the production readiness items in the next section.
+
+Vercel and Netlify can host Express applications, but PondBasket needs a dedicated portability pass before either external deployment. The existing server owns development Vite middleware, OAuth callback behavior, database access, and storage helpers. Copying it unchanged to a serverless host risks breaking the public asset path, authentication callback, signed uploads, or cold-start behavior.
+
+| Provider | Compatibility assessment                                                                                                         | Required work before user-initiated deployment                                                                                                                                                                        |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel   | Feasible after serverless adaptation. Express runs as a single function and static assets must be placed under `public/**`. [1]  | Export a serverless Express application, separate development-only Vite middleware, map static build output to `public`, configure every secret/database variable, and validate OAuth callback URLs and file uploads. |
+| Netlify  | Feasible after a Functions wrapper. Netlify documents an Express plus `serverless-http` function and redirect configuration. [2] | Create a Netlify Function adapter, add routing rewrites, configure the functions build/runtime, supply all secrets, and test database, OAuth, and storage paths in deploy previews.                                   |
+
+No Vercel or Netlify deployment has been attempted. If you choose external hosting, complete the portability work in a separate change and then deploy through the provider’s authenticated interface.
 
 ## Production launch blockers
 
-> **Do not activate real payments, refunds, transfers, or production legal claims in this project until the relevant approvals, credentials, operating procedures, and counsel review are completed.**
+> Do not activate real payments, refunds, transfers, or production legal claims until relevant approvals, credentials, operating procedures, and counsel review are complete.
 
-Production requires, at minimum, payment-provider approval for the marketplace model, verified business and bank accounts, a reviewed settlement and payout process, qualified Nigerian legal review of all published policies, verified farmer-operational controls, production notification credentials, incident response, delivery operations, and reconciliation testing. The app is designed to fail closed for financial uncertainty and does not silently substitute a mock operation for a requested production financial operation.
+At minimum, production requires payment-provider approval, verified business and payout accounts, farmer identity and operational controls, reviewed Nigerian legal policies, real notification credentials, delivery operations, reconciliation processes, incident response, and end-to-end testing.
 
+## References
+
+[1]: https://vercel.com/docs/frameworks/backend/express "Express on Vercel"
+[2]: https://docs.netlify.com/build/frameworks/framework-setup-guides/express/ "Express on Netlify"

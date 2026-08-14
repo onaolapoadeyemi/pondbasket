@@ -8,8 +8,11 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
         <Waves className="absolute -bottom-1 left-0 h-6 w-9 text-[#d6e46b]/45" />
         <FishSymbol className="relative h-5 w-5 text-[#f6f4ec]" />
       </div>
-      {!compact && <span className="font-display text-[1.25rem] font-bold tracking-[-0.05em] text-[#092b2a]">{BRAND.name}</span>}
+      {!compact && (
+        <span className="font-display text-[1.25rem] font-bold tracking-[-0.05em] text-[#092b2a]">
+          {BRAND.name}
+        </span>
+      )}
     </div>
   );
 }
-

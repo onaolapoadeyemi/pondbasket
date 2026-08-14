@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { COOKIE_NAME, UNAUTHED_ERR_MSG } from '@shared/const';
+import { COOKIE_NAME, UNAUTHED_ERR_MSG } from "@shared/const";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -9,13 +9,31 @@ import { startLogin } from "./const";
 import { CartProvider } from "./contexts/CartContext";
 import "./index.css";
 
-const isManagedPreview = location.hostname.endsWith(".manus.computer") || location.hostname === "127.0.0.1" || location.hostname === "localhost";
+const isManagedPreview =
+  location.hostname.endsWith(".manus.computer") ||
+  location.hostname === "127.0.0.1" ||
+  location.hostname === "localhost";
 
 if (isManagedPreview && "serviceWorker" in navigator) {
   // Preview sessions must never retain an old development HTML shell: it can
   // reference a previous Vite client and its unreachable HMR WebSocket.
-  navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(registrations.map(registration => registration.unregister()))).catch(() => undefined);
-  if ("caches" in window) caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith("pondbasket-shell-")).map(key => caches.delete(key)))).catch(() => undefined);
+  navigator.serviceWorker
+    .getRegistrations()
+    .then(registrations =>
+      Promise.all(registrations.map(registration => registration.unregister()))
+    )
+    .catch(() => undefined);
+  if ("caches" in window)
+    caches
+      .keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(key => key.startsWith("pondbasket-shell-"))
+            .map(key => caches.delete(key))
+        )
+      )
+      .catch(() => undefined);
 } else if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {
@@ -91,7 +109,9 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <CartProvider><App /></CartProvider>
+      <CartProvider>
+        <App />
+      </CartProvider>
     </QueryClientProvider>
   </trpc.Provider>
 );
