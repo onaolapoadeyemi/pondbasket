@@ -41,3 +41,7 @@
 - [x] Cover customer.favorites saved-listing readback in the direct tRPC regression suite.
 - [x] Add route-level lazy loading and vendor chunk splitting to remove the oversized production bundle warning.
 - [x] Move all pnpm overrides and patch configuration into pnpm-workspace.yaml and refresh stale browser baseline data.
+- [x] Perform a fresh post-maintenance audit for static errors, test regressions, dependency vulnerabilities, runtime issues, and production build warnings.
+- [ ] Resolve the recurring managed-preview Vite WebSocket connection errors observed in current browser logs.
+- [ ] Evaluate and remediate remaining development-only dependency advisories without destabilizing the validated build toolchain.
+- [x] Upgrade direct development tooling to compatible patched releases and verify the resulting dependency tree, tests, and production build.
