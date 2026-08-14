@@ -42,6 +42,6 @@
 - [x] Add route-level lazy loading and vendor chunk splitting to remove the oversized production bundle warning.
 - [x] Move all pnpm overrides and patch configuration into pnpm-workspace.yaml and refresh stale browser baseline data.
 - [x] Perform a fresh post-maintenance audit for static errors, test regressions, dependency vulnerabilities, runtime issues, and production build warnings.
-- [ ] Resolve the recurring managed-preview Vite WebSocket connection errors observed in current browser logs.
-- [ ] Evaluate and remediate remaining development-only dependency advisories without destabilizing the validated build toolchain.
+- [x] Resolve the recurring managed-preview Vite WebSocket connection errors observed in current browser logs.
+- [x] Evaluate and remediate actionable development-only dependency advisories without destabilizing the validated build toolchain; the sole remaining moderate finding is an upstream Drizzle Kit legacy-esbuild dependency with no compatible package update available.
 - [x] Upgrade direct development tooling to compatible patched releases and verify the resulting dependency tree, tests, and production build.

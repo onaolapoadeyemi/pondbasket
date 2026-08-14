@@ -10,12 +10,11 @@ export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
     // The managed preview terminates TLS at its public origin and forwards
-    // requests to this HTTP server. Bind Vite's HMR endpoint to that same
-    // server and tell clients to reconnect through secure port 443.
+    // requests to this HTTP server. Binding Vite's endpoint to the Express
+    // server lets its client inherit the active page origin: wss/443 in the
+    // public preview and ws/3000 in the local preview harness.
     hmr: {
       server,
-      protocol: "wss",
-      clientPort: 443,
     },
     allowedHosts: true as const,
   };
