@@ -45,3 +45,4 @@
 - [x] Resolve the recurring managed-preview Vite WebSocket connection errors observed in current browser logs.
 - [x] Evaluate and remediate actionable development-only dependency advisories without destabilizing the validated build toolchain; the sole remaining moderate finding is an upstream Drizzle Kit legacy-esbuild dependency with no compatible package update available.
 - [x] Upgrade direct development tooling to compatible patched releases and verify the resulting dependency tree, tests, and production build.
+- [x] Add a GitHub Actions dependency-audit workflow that checks production dependency vulnerabilities on pull requests, pushes, and a scheduled cadence.
