@@ -59,3 +59,8 @@
 - [x] Add Vercel deployment configuration, static-client build output handling, and deployment-specific validation without publishing externally.
 - [x] Document the configured Vercel path and the additional Netlify adapter work required for PondBasket’s OAuth, database, and S3-backed services.
 - [x] Exclude generated root Vercel public build artifacts from ESLint so the deployment smoke build does not contaminate source-quality validation.
+- [x] Add polished request loading states and retryable API error feedback across catalog and customer-facing data flows.
+- [x] Add accessible catalog filters and sorting controls for species, processing, availability, fulfillment, and price or freshness ordering.
+- [x] Implement a Netlify Function adapter with redirects, build configuration, local smoke validation, and updated deployment documentation.
+- [x] Apply the RequestFeedback loading and retry pattern to Cart, ProductDetail, and CustomerHub query flows.
+- [x] Add a dedicated processing filter to the Shop catalog presentation logic and regression coverage.

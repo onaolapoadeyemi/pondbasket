@@ -157,7 +157,7 @@ const plugins = [
 ];
 
 const buildOutputDirectory =
-  process.env.VERCEL_BUILD === "1"
+  process.env.SERVERLESS_STATIC_BUILD === "1"
     ? path.resolve(import.meta.dirname, "public")
     : path.resolve(import.meta.dirname, "dist", "public");
 

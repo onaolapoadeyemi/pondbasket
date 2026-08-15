@@ -13,13 +13,19 @@ import {
 import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
 import { ProductCard } from "@/components/ProductCard";
+import {
+  ListingGridSkeleton,
+  RequestError,
+  RequestRefreshNotice,
+} from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 
 const zones = ["Ajah", "Lekki Phase 1", "Chevron"];
 export default function Home() {
   const [zone, setZone] = useState("Ajah");
   const input = useMemo(() => ({ zone }), [zone]);
-  const { data, isLoading } = trpc.catalog.list.useQuery(input);
+  const { data, isLoading, isFetching, error, refetch } =
+    trpc.catalog.list.useQuery(input);
   return (
     <main>
       <section className="relative overflow-hidden bg-[#092b2a] pb-16 pt-12 text-white sm:pb-24 sm:pt-20">
@@ -136,17 +142,28 @@ export default function Home() {
             <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#52716c]" />
           </div>
         </div>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoading
-            ? Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  className="h-[430px] animate-pulse rounded-[22px] bg-[#e8e7dc]"
-                  key={index}
-                />
-              ))
-            : data?.items
-                .slice(0, 3)
-                .map(item => <ProductCard key={item.id} item={item} />)}
+        {isFetching && !isLoading ? (
+          <div className="mt-5">
+            <RequestRefreshNotice label="Refreshing this zone…" />
+          </div>
+        ) : null}
+        <div className="mt-8">
+          {error ? (
+            <RequestError
+              title="Fresh fish could not be loaded."
+              detail={error.message}
+              onRetry={() => refetch()}
+              isRetrying={isFetching}
+            />
+          ) : isLoading ? (
+            <ListingGridSkeleton count={3} />
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {data?.items.slice(0, 3).map(item => (
+                <ProductCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
         </div>
         <div className="mt-8 text-center">
           <Link

@@ -1,6 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { formatNgn, type CatalogItem } from "@/components/ProductCard";
+import {
+  RequestError,
+  RequestRefreshNotice,
+} from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { startLogin } from "@/const";
 import { useCart } from "@/contexts/CartContext";
@@ -42,6 +46,17 @@ export default function ProductDetail() {
     return (
       <main className="container py-14">
         <div className="h-[520px] animate-pulse rounded-[30px] bg-[#e8e7dc]" />
+      </main>
+    );
+  if (catalog.error)
+    return (
+      <main className="container py-14">
+        <RequestError
+          title="This listing could not be loaded."
+          detail={catalog.error.message}
+          onRetry={() => catalog.refetch()}
+          isRetrying={catalog.isFetching}
+        />
       </main>
     );
   if (!product)
@@ -221,6 +236,19 @@ export default function ProductDetail() {
               </div>
             </div>
           )}
+          {quote.error ? (
+            <RequestError
+              className="mt-5"
+              title="The delivery quote could not be refreshed."
+              detail={quote.error.message}
+              onRetry={() => quote.refetch()}
+              isRetrying={quote.isFetching}
+            />
+          ) : quote.isFetching ? (
+            <div className="mt-5">
+              <RequestRefreshNotice label="Updating delivery quote…" />
+            </div>
+          ) : null}
           <Button
             onClick={addToBasket}
             className="mt-6 w-full rounded-full bg-[#0b4f4a]"
