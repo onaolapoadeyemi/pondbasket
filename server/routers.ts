@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
+  campaignConversions,
   customerAddresses,
   customerFavorites,
   customerProfiles,
@@ -12,6 +13,7 @@ import {
   featureFlags,
   notifications,
   orderEvents,
+  orderCampaignAttributions,
   orderPricingSnapshots,
   orders,
   payouts,
@@ -31,6 +33,10 @@ import {
   type OrderState,
 } from "../shared/domain";
 import { canSaveFavorite, favoriteToggleOutcome } from "../shared/favorites";
+import {
+  buildDailyShareTrend,
+  buildMonthlyShareTrend,
+} from "../shared/shareTrends";
 import { getDb } from "./db";
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -86,6 +92,10 @@ function correlation() {
 function hashPin(pin: string) {
   const salt = crypto.randomBytes(16).toString("hex");
   return `${salt}:${crypto.scryptSync(pin, salt, 32).toString("hex")}`;
+}
+
+function hashCampaignToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 function verifyPin(pin: string, stored: string) {
@@ -386,13 +396,22 @@ export const appRouter = router({
           z.object({
             shareType: z.literal("product"),
             productId: z.number().int().positive(),
+            campaignToken: z.string().uuid().optional(),
           }),
         ])
       )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) return { recorded: false };
-        await db.insert(shareEvents).values(input);
+        await db.insert(shareEvents).values({
+          shareType: input.shareType,
+          ...(input.shareType === "product"
+            ? { productId: input.productId }
+            : {}),
+          ...(input.shareType === "product" && input.campaignToken
+            ? { campaignTokenHash: hashCampaignToken(input.campaignToken) }
+            : {}),
+        });
         return { recorded: true };
       }),
   }),
@@ -1053,6 +1072,7 @@ export const appRouter = router({
             "other",
           ]),
           idempotencyKey: z.string().uuid(),
+          campaignToken: z.string().uuid().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -1102,6 +1122,21 @@ export const appRouter = router({
             code: "BAD_REQUEST",
             message: "Order quantity is below the listing minimum.",
           });
+        const campaignTokenHash = input.campaignToken
+          ? hashCampaignToken(input.campaignToken)
+          : undefined;
+        const sharedCampaign = campaignTokenHash
+          ? await db
+              .select({ id: shareEvents.id })
+              .from(shareEvents)
+              .where(
+                and(
+                  eq(shareEvents.productId, product[0].id),
+                  eq(shareEvents.campaignTokenHash, campaignTokenHash)
+                )
+              )
+              .limit(1)
+          : [];
         const zone = await db
           .select()
           .from(serviceZones)
@@ -1185,6 +1220,12 @@ export const appRouter = router({
             reason: "Inventory safely reserved; payment pending",
             correlationId: correlation(),
           });
+          if (campaignTokenHash && sharedCampaign[0])
+            await tx.insert(orderCampaignAttributions).values({
+              orderId,
+              productId: product[0].id,
+              campaignTokenHash,
+            });
           return orderId;
         });
         await simulateNotification(
@@ -1342,6 +1383,27 @@ export const appRouter = router({
           input.to,
           input.reason ?? null
         );
+        if (input.to === "COMPLETED") {
+          const attribution = await db
+            .select()
+            .from(orderCampaignAttributions)
+            .where(eq(orderCampaignAttributions.orderId, input.orderId))
+            .limit(1);
+          if (attribution[0]) {
+            await db
+              .insert(campaignConversions)
+              .values({
+                campaignTokenHash: attribution[0].campaignTokenHash,
+                productId: attribution[0].productId,
+              })
+              .onDuplicateKeyUpdate({
+                set: { campaignTokenHash: attribution[0].campaignTokenHash },
+              });
+            await db
+              .delete(orderCampaignAttributions)
+              .where(eq(orderCampaignAttributions.id, attribution[0].id));
+          }
+        }
         const farmerOwner = await db
           .select()
           .from(farmerApplications)
@@ -1571,32 +1633,44 @@ export const appRouter = router({
           total: 0,
           catalog: 0,
           product: 0,
+          completedConversions: 0,
+          weeklyTrend: buildDailyShareTrend([]),
+          monthlyTrend: buildMonthlyShareTrend([]),
           topProducts: [] as { productId: number; shareCount: number }[],
         };
-      const [byType, topProductRows] = await Promise.all([
-        db
-          .select({
-            shareType: shareEvents.shareType,
-            shareCount: sql<number>`count(*)`,
-          })
-          .from(shareEvents)
-          .groupBy(shareEvents.shareType),
-        db
-          .select({
-            productId: shareEvents.productId,
-            shareCount: sql<number>`count(*)`,
-          })
-          .from(shareEvents)
-          .where(
-            and(
-              eq(shareEvents.shareType, "product"),
-              isNotNull(shareEvents.productId)
+      const trendStart = new Date();
+      trendStart.setUTCMonth(trendStart.getUTCMonth() - 5, 1);
+      trendStart.setUTCHours(0, 0, 0, 0);
+      const [byType, topProductRows, trendEvents, conversionCount] =
+        await Promise.all([
+          db
+            .select({
+              shareType: shareEvents.shareType,
+              shareCount: sql<number>`count(*)`,
+            })
+            .from(shareEvents)
+            .groupBy(shareEvents.shareType),
+          db
+            .select({
+              productId: shareEvents.productId,
+              shareCount: sql<number>`count(*)`,
+            })
+            .from(shareEvents)
+            .where(
+              and(
+                eq(shareEvents.shareType, "product"),
+                isNotNull(shareEvents.productId)
+              )
             )
-          )
-          .groupBy(shareEvents.productId)
-          .orderBy(desc(sql`count(*)`))
-          .limit(5),
-      ]);
+            .groupBy(shareEvents.productId)
+            .orderBy(desc(sql`count(*)`))
+            .limit(5),
+          db
+            .select({ createdAt: shareEvents.createdAt })
+            .from(shareEvents)
+            .where(gte(shareEvents.createdAt, trendStart)),
+          db.select({ count: sql<number>`count(*)` }).from(campaignConversions),
+        ]);
       const countFor = (shareType: "catalog" | "product") =>
         Number(
           byType.find(event => event.shareType === shareType)?.shareCount ?? 0
@@ -1607,6 +1681,9 @@ export const appRouter = router({
         total: catalog + product,
         catalog,
         product,
+        completedConversions: Number(conversionCount[0]?.count ?? 0),
+        weeklyTrend: buildDailyShareTrend(trendEvents),
+        monthlyTrend: buildMonthlyShareTrend(trendEvents),
         topProducts: topProductRows.flatMap(event =>
           event.productId === null
             ? []

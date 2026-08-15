@@ -178,6 +178,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
+        onlyExplicitManualChunks: true,
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
           if (id.includes("@radix-ui") || id.includes("lucide-react"))

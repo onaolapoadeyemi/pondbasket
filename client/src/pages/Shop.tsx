@@ -17,7 +17,7 @@ import {
 } from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { shareLink } from "@/lib/shareLink";
+import { shareLink, supportsNativeShare } from "@/lib/shareLink";
 import { presentCatalogItems } from "@shared/catalogPresentation";
 import {
   DEFAULT_CATALOG_URL_STATE,
@@ -36,6 +36,7 @@ export default function Shop() {
     [locationSearch]
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const nativeShareSupported = supportsNativeShare();
   const [shareState, setShareState] = useState<
     "idle" | "shared" | "copied" | "failed"
   >("idle");
@@ -164,6 +165,16 @@ export default function Shop() {
                 : "Share"}
         </Button>
       </div>
+      {!nativeShareSupported && (
+        <p
+          className="mt-3 flex items-center gap-2 text-xs leading-5 text-[#52716c]"
+          role="status"
+        >
+          <Copy className="h-3.5 w-3.5 shrink-0 text-[#177e73]" />
+          Your browser will copy a shareable link instead of opening a native
+          share sheet.
+        </p>
+      )}
       {filtersOpen && (
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[22px] border border-[#092b2a]/10 bg-[#e8e7dc] p-4">
           <Filter className="h-4 w-4 text-[#177e73]" />

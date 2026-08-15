@@ -222,6 +222,7 @@ export const shareEvents = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     shareType: mysqlEnum("shareType", ["catalog", "product"]).notNull(),
     productId: int("productId"),
+    campaignTokenHash: varchar("campaignTokenHash", { length: 64 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => [
@@ -229,6 +230,50 @@ export const shareEvents = mysqlTable(
     index("share_events_product_created_idx").on(
       table.productId,
       table.createdAt
+    ),
+    index("share_events_campaign_idx").on(table.campaignTokenHash),
+  ]
+);
+
+/**
+ * Completed conversions for anonymous shared-link campaigns. This table has no
+ * order, customer, user, IP, device, URL, referrer, or search-query fields.
+ */
+export const campaignConversions = mysqlTable(
+  "campaignConversions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    campaignTokenHash: varchar("campaignTokenHash", { length: 64 })
+      .notNull()
+      .unique(),
+    productId: int("productId").notNull(),
+    convertedAt: timestamp("convertedAt").defaultNow().notNull(),
+  },
+  table => [
+    index("campaign_conversions_product_idx").on(
+      table.productId,
+      table.convertedAt
+    ),
+  ]
+);
+
+/**
+ * Short-lived internal handoff from a shared-link checkout to completion. It
+ * contains no direct identity and is deleted after its aggregate conversion is
+ * recorded, leaving no conversion-to-order linkage in reporting data.
+ */
+export const orderCampaignAttributions = mysqlTable(
+  "orderCampaignAttributions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    orderId: int("orderId").notNull().unique(),
+    productId: int("productId").notNull(),
+    campaignTokenHash: varchar("campaignTokenHash", { length: 64 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("order_campaign_attributions_campaign_idx").on(
+      table.campaignTokenHash
     ),
   ]
 );

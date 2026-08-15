@@ -6,6 +6,16 @@ export type ShareLinkInput = {
 
 export type ShareLinkResult = "shared" | "copied" | "unavailable" | "cancelled";
 
+export function supportsNativeShare() {
+  return (
+    typeof navigator !== "undefined" && typeof navigator.share === "function"
+  );
+}
+
+export function createAnonymousCampaignToken() {
+  return globalThis.crypto?.randomUUID?.() ?? undefined;
+}
+
 function isShareCancellation(error: unknown) {
   return error instanceof Error && error.name === "AbortError";
 }
@@ -21,7 +31,7 @@ export async function shareLink({
 }: ShareLinkInput): Promise<ShareLinkResult> {
   if (typeof navigator === "undefined") return "unavailable";
 
-  if (typeof navigator.share === "function") {
+  if (supportsNativeShare()) {
     try {
       await navigator.share({ title, text, url });
       return "shared";

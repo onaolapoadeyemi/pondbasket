@@ -73,3 +73,8 @@
 - [x] Add an explicit loading state for the administrator share analytics panel before showing empty aggregate results.
 - [x] Ensure catalog-card canonical URLs resolve their corresponding product details so Copy link always shares an openable listing.
 - [x] Refine the mobile product-detail action layout so Copy link and Save for later remain fully visible without overlap.
+- [x] Add weekly and monthly share-trend reporting with accessible administrator charts.
+- [x] Add anonymous campaign-token attribution from shared listing links through completed order conversion reporting.
+- [x] Add clear fallback guidance when a browser does not support the native Web Share API.
+- [x] Restore a stable managed preview after the Cart context hot-reload error interrupted analytics visual verification.
+- [x] Resolve the chart-related Rollup circular chunk warning without regressing route-level code splitting.
