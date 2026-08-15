@@ -55,3 +55,7 @@
 - [x] Assess Vercel and Netlify compatibility and document the supported deployment path without attempting a publish.
 - [x] Resolve current ESLint findings in service-worker and application source files so the required build-and-test quality check passes.
 - [x] Run fresh public-preview and local screenshot-harness runtime smoke tests with current log review after the final quality-gate changes.
+- [x] Create a reusable production Express application factory that can run under both the managed server and a Vercel serverless entry point.
+- [x] Add Vercel deployment configuration, static-client build output handling, and deployment-specific validation without publishing externally.
+- [x] Document the configured Vercel path and the additional Netlify adapter work required for PondBasket’s OAuth, database, and S3-backed services.
+- [x] Exclude generated root Vercel public build artifacts from ESLint so the deployment smoke build does not contaminate source-quality validation.
