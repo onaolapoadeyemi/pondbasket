@@ -212,6 +212,27 @@ export const customerFavorites = mysqlTable(
   ]
 );
 
+/**
+ * Aggregate sharing signal only. Deliberately excludes user, session, device,
+ * IP address, referrer, URL query, and search-query columns.
+ */
+export const shareEvents = mysqlTable(
+  "shareEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    shareType: mysqlEnum("shareType", ["catalog", "product"]).notNull(),
+    productId: int("productId"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => [
+    index("share_events_type_created_idx").on(table.shareType, table.createdAt),
+    index("share_events_product_created_idx").on(
+      table.productId,
+      table.createdAt
+    ),
+  ]
+);
+
 export const orders = mysqlTable(
   "orders",
   {

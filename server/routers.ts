@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
@@ -18,6 +18,7 @@ import {
   platformSettings,
   productImages,
   products,
+  shareEvents,
   serviceZones,
   users,
   verificationDocuments,
@@ -375,6 +376,24 @@ export const appRouter = router({
           }),
           feeDisclosure: BRAND.feeLanguage,
         };
+      }),
+  }),
+  analytics: router({
+    recordShare: publicProcedure
+      .input(
+        z.discriminatedUnion("shareType", [
+          z.object({ shareType: z.literal("catalog") }),
+          z.object({
+            shareType: z.literal("product"),
+            productId: z.number().int().positive(),
+          }),
+        ])
+      )
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { recorded: false };
+        await db.insert(shareEvents).values(input);
+        return { recorded: true };
       }),
   }),
   customer: router({
@@ -1543,6 +1562,61 @@ export const appRouter = router({
         openDisputes: Number(openDisputes[0]?.count ?? 0),
         payments: "SIMULATED",
         demoMode: BRAND.demoMode,
+      };
+    }),
+    shareAnalytics: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db)
+        return {
+          total: 0,
+          catalog: 0,
+          product: 0,
+          topProducts: [] as { productId: number; shareCount: number }[],
+        };
+      const [byType, topProductRows] = await Promise.all([
+        db
+          .select({
+            shareType: shareEvents.shareType,
+            shareCount: sql<number>`count(*)`,
+          })
+          .from(shareEvents)
+          .groupBy(shareEvents.shareType),
+        db
+          .select({
+            productId: shareEvents.productId,
+            shareCount: sql<number>`count(*)`,
+          })
+          .from(shareEvents)
+          .where(
+            and(
+              eq(shareEvents.shareType, "product"),
+              isNotNull(shareEvents.productId)
+            )
+          )
+          .groupBy(shareEvents.productId)
+          .orderBy(desc(sql`count(*)`))
+          .limit(5),
+      ]);
+      const countFor = (shareType: "catalog" | "product") =>
+        Number(
+          byType.find(event => event.shareType === shareType)?.shareCount ?? 0
+        );
+      const catalog = countFor("catalog");
+      const product = countFor("product");
+      return {
+        total: catalog + product,
+        catalog,
+        product,
+        topProducts: topProductRows.flatMap(event =>
+          event.productId === null
+            ? []
+            : [
+                {
+                  productId: event.productId,
+                  shareCount: Number(event.shareCount),
+                },
+              ]
+        ),
       };
     }),
     applications: adminProcedure.query(async () => {
