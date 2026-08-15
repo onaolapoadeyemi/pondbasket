@@ -64,3 +64,6 @@
 - [x] Implement a Netlify Function adapter with redirects, build configuration, local smoke validation, and updated deployment documentation.
 - [x] Apply the RequestFeedback loading and retry pattern to Cart, ProductDetail, and CustomerHub query flows.
 - [x] Add a dedicated processing filter to the Shop catalog presentation logic and regression coverage.
+- [x] Synchronize catalog search, filters, and sorting with validated URL query parameters that restore shared result views.
+- [x] Add a catalog Share control that copies the current filtered URL with clear success and clipboard fallback feedback.
+- [x] Include shared domain and URL-state regression tests in the Vitest discovery configuration.

@@ -1,4 +1,13 @@
-import { Filter, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Filter,
+  MapPin,
+  Search,
+  Share2,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
 import {
@@ -8,29 +17,50 @@ import {
 } from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { presentCatalogItems } from "@shared/catalogPresentation";
 import {
-  presentCatalogItems,
-  type CatalogAvailabilityFilter,
-  type CatalogSort,
-} from "@shared/catalogPresentation";
+  DEFAULT_CATALOG_URL_STATE,
+  parseCatalogUrlState,
+  serializeCatalogUrlState,
+  type CatalogUrlState,
+} from "@shared/catalogUrlState";
+import { useLocation, useSearch } from "wouter";
 
 const zones = ["Ajah", "Lekki Phase 1", "Chevron"];
 export default function Shop() {
-  const [zone, setZone] = useState("Ajah");
-  const [species, setSpecies] = useState<"catfish" | "tilapia" | undefined>();
-  const [form, setForm] = useState<"live" | "fresh" | "frozen" | undefined>();
-  const [fulfillment, setFulfillment] = useState<
-    "pickup" | "farmer_delivery" | "platform_delivery" | undefined
-  >();
-  const [search, setSearch] = useState("");
-  const [processing, setProcessing] = useState("all");
-  const [availability, setAvailability] =
-    useState<CatalogAvailabilityFilter>("all");
-  const [sort, setSort] = useState<CatalogSort>("recommended");
+  const [, setLocation] = useLocation();
+  const locationSearch = useSearch();
+  const catalogState = useMemo(
+    () => parseCatalogUrlState(locationSearch),
+    [locationSearch]
+  );
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
+    "idle"
+  );
+  const updateCatalogState = (updates: Partial<CatalogUrlState>) => {
+    const nextSearch = serializeCatalogUrlState({
+      ...catalogState,
+      ...updates,
+    });
+    setLocation(nextSearch ? `/shop?${nextSearch}` : "/shop", {
+      replace: true,
+    });
+  };
   const input = useMemo(
-    () => ({ zone, species, form, fulfillment, verifiedOnly: true }),
-    [zone, species, form, fulfillment]
+    () => ({
+      zone: catalogState.zone,
+      species: catalogState.species,
+      form: catalogState.form,
+      fulfillment: catalogState.fulfillment,
+      verifiedOnly: true,
+    }),
+    [
+      catalogState.form,
+      catalogState.fulfillment,
+      catalogState.species,
+      catalogState.zone,
+    ]
   );
   const { data, isLoading, isFetching, error, refetch } =
     trpc.catalog.list.useQuery(input);
@@ -38,21 +68,25 @@ export default function Shop() {
     () =>
       presentCatalogItems(
         data?.items ?? [],
-        search,
-        processing,
-        availability,
-        sort
+        catalogState.search,
+        catalogState.processing,
+        catalogState.availability,
+        catalogState.sort
       ),
-    [availability, data?.items, processing, search, sort]
+    [catalogState, data?.items]
   );
-  const reset = () => {
-    setSpecies(undefined);
-    setForm(undefined);
-    setFulfillment(undefined);
-    setSearch("");
-    setProcessing("all");
-    setAvailability("all");
-    setSort("recommended");
+  const reset = () => updateCatalogState(DEFAULT_CATALOG_URL_STATE);
+  const shareCatalog = async () => {
+    const url = new URL(window.location.href);
+    url.pathname = "/shop";
+    url.search = serializeCatalogUrlState(catalogState);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setShareState("copied");
+    } catch {
+      setShareState("failed");
+    }
+    window.setTimeout(() => setShareState("idle"), 2500);
   };
   return (
     <main className="container py-10 sm:py-14">
@@ -74,16 +108,18 @@ export default function Shop() {
           <input
             className="h-11 w-full rounded-xl bg-[#f6f4ec] pl-9 pr-3 text-sm outline-none placeholder:text-[#76938e]"
             placeholder="Search catfish or tilapia"
-            value={search}
-            onChange={event => setSearch(event.target.value)}
+            value={catalogState.search}
+            onChange={event =>
+              updateCatalogState({ search: event.target.value })
+            }
             aria-label="Search fish listings"
           />
         </div>
         <div className="relative">
           <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#177e73]" />
           <select
-            value={zone}
-            onChange={e => setZone(e.target.value)}
+            value={catalogState.zone}
+            onChange={event => updateCatalogState({ zone: event.target.value })}
             className="h-11 min-w-40 appearance-none rounded-xl bg-[#f6f4ec] py-2 pl-9 pr-3 text-sm font-bold outline-none"
           >
             {zones.map(item => (
@@ -99,19 +135,39 @@ export default function Shop() {
           <SlidersHorizontal className="mr-2 h-4 w-4" />
           Filters
         </Button>
+        <Button
+          onClick={shareCatalog}
+          variant="outline"
+          className="h-11 rounded-xl border-[#092b2a]/15 text-[#092b2a]"
+          aria-live="polite"
+        >
+          {shareState === "copied" ? (
+            <Check className="mr-2 h-4 w-4 text-[#177e73]" />
+          ) : shareState === "failed" ? (
+            <Copy className="mr-2 h-4 w-4 text-[#9c3b24]" />
+          ) : (
+            <Share2 className="mr-2 h-4 w-4" />
+          )}
+          {shareState === "copied"
+            ? "Link copied"
+            : shareState === "failed"
+              ? "Copy unavailable"
+              : "Share"}
+        </Button>
       </div>
       {filtersOpen && (
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[22px] border border-[#092b2a]/10 bg-[#e8e7dc] p-4">
           <Filter className="h-4 w-4 text-[#177e73]" />
           <label className="text-xs font-bold text-[#52716c]">Species</label>
           <select
-            value={species ?? "all"}
-            onChange={e =>
-              setSpecies(
-                e.target.value === "all"
-                  ? undefined
-                  : (e.target.value as "catfish" | "tilapia")
-              )
+            value={catalogState.species ?? "all"}
+            onChange={event =>
+              updateCatalogState({
+                species:
+                  event.target.value === "all"
+                    ? undefined
+                    : (event.target.value as "catfish" | "tilapia"),
+              })
             }
             className="rounded-lg bg-white px-3 py-2 text-sm"
           >
@@ -121,13 +177,14 @@ export default function Shop() {
           </select>
           <label className="text-xs font-bold text-[#52716c]">Form</label>
           <select
-            value={form ?? "all"}
-            onChange={e =>
-              setForm(
-                e.target.value === "all"
-                  ? undefined
-                  : (e.target.value as "live" | "fresh" | "frozen")
-              )
+            value={catalogState.form ?? "all"}
+            onChange={event =>
+              updateCatalogState({
+                form:
+                  event.target.value === "all"
+                    ? undefined
+                    : (event.target.value as "live" | "fresh" | "frozen"),
+              })
             }
             className="rounded-lg bg-white px-3 py-2 text-sm"
           >
@@ -138,8 +195,10 @@ export default function Shop() {
           </select>
           <label className="text-xs font-bold text-[#52716c]">Processing</label>
           <select
-            value={processing}
-            onChange={event => setProcessing(event.target.value)}
+            value={catalogState.processing}
+            onChange={event =>
+              updateCatalogState({ processing: event.target.value })
+            }
             className="rounded-lg bg-white px-3 py-2 text-sm"
           >
             <option value="all">Any processing</option>
@@ -151,16 +210,17 @@ export default function Shop() {
             Fulfillment
           </label>
           <select
-            value={fulfillment ?? "all"}
-            onChange={e =>
-              setFulfillment(
-                e.target.value === "all"
-                  ? undefined
-                  : (e.target.value as
-                      | "pickup"
-                      | "farmer_delivery"
-                      | "platform_delivery")
-              )
+            value={catalogState.fulfillment ?? "all"}
+            onChange={event =>
+              updateCatalogState({
+                fulfillment:
+                  event.target.value === "all"
+                    ? undefined
+                    : (event.target.value as
+                        | "pickup"
+                        | "farmer_delivery"
+                        | "platform_delivery"),
+              })
             }
             className="rounded-lg bg-white px-3 py-2 text-sm"
           >
@@ -173,9 +233,12 @@ export default function Shop() {
             Availability
           </label>
           <select
-            value={availability}
+            value={catalogState.availability}
             onChange={event =>
-              setAvailability(event.target.value as CatalogAvailabilityFilter)
+              updateCatalogState({
+                availability: event.target
+                  .value as CatalogUrlState["availability"],
+              })
             }
             className="rounded-lg bg-white px-3 py-2 text-sm"
           >
@@ -186,8 +249,12 @@ export default function Shop() {
           </select>
           <label className="text-xs font-bold text-[#52716c]">Sort</label>
           <select
-            value={sort}
-            onChange={event => setSort(event.target.value as CatalogSort)}
+            value={catalogState.sort}
+            onChange={event =>
+              updateCatalogState({
+                sort: event.target.value as CatalogUrlState["sort"],
+              })
+            }
             className="rounded-lg bg-white px-3 py-2 text-sm"
           >
             <option value="recommended">Recommended</option>
@@ -218,7 +285,9 @@ export default function Shop() {
           <div className="mt-8 flex items-center justify-between">
             <p className="text-sm font-medium text-[#52716c]">
               {items.length} listing{items.length === 1 ? "" : "s"} available in{" "}
-              <span className="font-bold text-[#092b2a]">{zone}</span>
+              <span className="font-bold text-[#092b2a]">
+                {catalogState.zone}
+              </span>
             </p>
             <div className="flex items-center gap-3">
               {isFetching && !isLoading ? (
