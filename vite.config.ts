@@ -156,6 +156,11 @@ const plugins = [
   vitePluginManusDebugCollector(),
 ];
 
+const buildOutputDirectory =
+  process.env.VERCEL_BUILD === "1"
+    ? path.resolve(import.meta.dirname, "public")
+    : path.resolve(import.meta.dirname, "dist", "public");
+
 export default defineConfig({
   plugins,
   resolve: {
@@ -169,7 +174,7 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: buildOutputDirectory,
     emptyOutDir: true,
     rollupOptions: {
       output: {

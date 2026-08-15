@@ -47,16 +47,18 @@ pnpm drizzle-kit generate
 
 ## Common commands
 
-| Command                               | Purpose                                            |
-| ------------------------------------- | -------------------------------------------------- |
-| `pnpm dev`                            | Start the local development server and Vite client |
-| `pnpm lint`                           | Run ESLint with zero warnings allowed              |
-| `pnpm format:check`                   | Verify Prettier formatting without changing files  |
-| `pnpm format`                         | Apply Prettier formatting                          |
-| `pnpm check`                          | Run TypeScript type checking                       |
-| `pnpm test`                           | Run the Vitest suite                               |
-| `pnpm build`                          | Build the browser bundle and server entry point    |
-| `pnpm audit --prod --audit-level=low` | Audit production dependencies                      |
+| Command                               | Purpose                                             |
+| ------------------------------------- | --------------------------------------------------- |
+| `pnpm dev`                            | Start the local development server and Vite client  |
+| `pnpm lint`                           | Run ESLint with zero warnings allowed               |
+| `pnpm format:check`                   | Verify Prettier formatting without changing files   |
+| `pnpm format`                         | Apply Prettier formatting                           |
+| `pnpm check`                          | Run TypeScript type checking                        |
+| `pnpm test`                           | Run the Vitest suite                                |
+| `pnpm build`                          | Build the browser bundle and server entry point     |
+| `pnpm build:vercel`                   | Build the Vercel static client output into `public` |
+| `pnpm smoke:vercel`                   | Build and smoke-test the Vercel function locally    |
+| `pnpm audit --prod --audit-level=low` | Audit production dependencies                       |
 
 ## Validation standard
 
@@ -97,14 +99,14 @@ The catalog is intentionally limited to **catfish** and **tilapia**. Monetary va
 
 **Recommended: use the project’s built-in hosting and publish from the project interface.** It is already aligned with the managed database, OAuth, storage, and platform secrets. Before launch, complete the production readiness items in the next section.
 
-Vercel and Netlify can host Express applications, but PondBasket needs a dedicated portability pass before either external deployment. The existing server owns development Vite middleware, OAuth callback behavior, database access, and storage helpers. Copying it unchanged to a serverless host risks breaking the public asset path, authentication callback, signed uploads, or cold-start behavior.
+PondBasket now includes a Vercel serverless adaptation: `server/app.ts` creates a reusable Express application; `api/index.ts` default-exports that application for Vercel; `pnpm build:vercel` produces the root `public/**` client output; and `vercel.json` supplies the function, build, output, and rewrite configuration. The Vercel function has a local build-and-response smoke test through `pnpm smoke:vercel`. Vercel serves Express as a single function and serves static files from `public/**`. [1]
 
-| Provider | Compatibility assessment                                                                                                         | Required work before user-initiated deployment                                                                                                                                                                        |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vercel   | Feasible after serverless adaptation. Express runs as a single function and static assets must be placed under `public/**`. [1]  | Export a serverless Express application, separate development-only Vite middleware, map static build output to `public`, configure every secret/database variable, and validate OAuth callback URLs and file uploads. |
-| Netlify  | Feasible after a Functions wrapper. Netlify documents an Express plus `serverless-http` function and redirect configuration. [2] | Create a Netlify Function adapter, add routing rewrites, configure the functions build/runtime, supply all secrets, and test database, OAuth, and storage paths in deploy previews.                                   |
+| Provider | Compatibility assessment                                                                                                                                    | Required work before user-initiated deployment                                                                                                                                                           |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vercel   | Configured and locally smoke-tested; ready for a user-initiated deployment once production environment values and OAuth callback allowlisting are in place. | Import the repository, configure the documented environment values, allowlist `https://YOUR-DOMAIN/api/oauth/callback`, and validate sign-in, database, uploads, and signed storage access in a preview. |
+| Netlify  | Not yet configured; the shared Express factory is ready for a Netlify Function adapter. [2]                                                                 | Add `serverless-http`, a Netlify function wrapper, `netlify.toml` redirects, and platform-preview tests for OAuth, database, and S3-backed storage.                                                      |
 
-No Vercel or Netlify deployment has been attempted. If you choose external hosting, complete the portability work in a separate change and then deploy through the provider’s authenticated interface.
+No Vercel or Netlify deployment has been attempted. See [`docs/EXTERNAL_DEPLOYMENT.md`](docs/EXTERNAL_DEPLOYMENT.md) for the exact Vercel configuration, required environment categories, validation commands, and Netlify follow-up work. Deploy only through the provider’s authenticated interface after its production integrations are configured.
 
 ## Production launch blockers
 

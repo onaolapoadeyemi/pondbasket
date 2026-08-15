@@ -49,8 +49,13 @@
 - [x] Investigate and stabilize intermittent Vite WebSocket failures in the local screenshot harness without regressing public-preview HMR; repeated local route captures and recent logs confirm the origin-inherited configuration is stable.
 - [x] Require the GitHub Actions Dependency Audit status check for pull requests targeting the main branch.
 - [x] Fix the Dependency Audit workflow setup order so pnpm is available before the Node cache is initialized.
-- [ ] Add a GitHub Actions build-and-test workflow and require its successful check for pull requests targeting main.
-- [ ] Run comprehensive formatting, static analysis, test, build, dependency, and runtime quality checks; resolve any confirmed regressions.
-- [ ] Add repository README setup, local development, validation, CI, Demo Mode, and deployment guidance.
-- [ ] Assess Vercel and Netlify compatibility and document the supported deployment path without attempting a publish.
-- [ ] Resolve current ESLint findings in service-worker and application source files so the required build-and-test quality check passes.
+- [x] Add a GitHub Actions build-and-test workflow and require its successful check for pull requests targeting main.
+- [x] Run comprehensive formatting, static analysis, test, build, dependency, and runtime quality checks; resolve any confirmed regressions.
+- [x] Add repository README setup, local development, validation, CI, Demo Mode, and deployment guidance.
+- [x] Assess Vercel and Netlify compatibility and document the supported deployment path without attempting a publish.
+- [x] Resolve current ESLint findings in service-worker and application source files so the required build-and-test quality check passes.
+- [x] Run fresh public-preview and local screenshot-harness runtime smoke tests with current log review after the final quality-gate changes.
+- [x] Create a reusable production Express application factory that can run under both the managed server and a Vercel serverless entry point.
+- [x] Add Vercel deployment configuration, static-client build output handling, and deployment-specific validation without publishing externally.
+- [x] Document the configured Vercel path and the additional Netlify adapter work required for PondBasket’s OAuth, database, and S3-backed services.
+- [x] Exclude generated root Vercel public build artifacts from ESLint so the deployment smoke build does not contaminate source-quality validation.
