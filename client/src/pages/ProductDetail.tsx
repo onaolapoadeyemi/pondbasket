@@ -10,6 +10,12 @@ import { startLogin } from "@/const";
 import { useCart } from "@/contexts/CartContext";
 import { trpc } from "@/lib/trpc";
 import {
+  createAnonymousCampaignToken,
+  shareLink,
+  supportsNativeShare,
+} from "@/lib/shareLink";
+import { parseCampaignToken, withCampaignToken } from "@shared/campaign";
+import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
@@ -22,17 +28,19 @@ import {
   Truck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link, useLocation, useRoute } from "wouter";
-import { shareLink } from "@/lib/shareLink";
+import { Link, useLocation, useRoute, useSearch } from "wouter";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/shop/:id");
   const [, setLocation] = useLocation();
+  const locationSearch = useSearch();
   const productId = Number(params?.id);
   const { line, add } = useCart();
   const { isAuthenticated } = useAuth();
   const catalog = trpc.catalog.list.useQuery();
   const product = catalog.data?.items.find(item => item.id === productId);
+  const campaignToken = parseCampaignToken(locationSearch);
+  const nativeShareSupported = supportsNativeShare();
   const recordShare = trpc.analytics.recordShare.useMutation();
   const [quantity, setQuantity] = useState<number | null>(null);
   const [zone, setZone] = useState("Ajah");
@@ -87,20 +95,29 @@ export default function ProductDetail() {
       quantity: effectiveQuantity,
       zone,
       purpose: "home_meal",
+      campaignToken,
     });
     setLocation("/cart");
   };
   const shareProduct = async () => {
+    const sharedCampaignToken = createAnonymousCampaignToken();
+    const canonicalUrl = `${window.location.origin}/shop/${product.id}`;
     const outcome = await shareLink({
       title: `${product.species} from ${product.farmer} | PondBasket`,
       text: `View this verified ${product.form} ${product.species} listing on PondBasket.`,
-      url: `${window.location.origin}/shop/${product.id}`,
+      url: sharedCampaignToken
+        ? withCampaignToken(canonicalUrl, sharedCampaignToken)
+        : canonicalUrl,
     });
     if (outcome === "cancelled") return;
     const nextState = outcome === "unavailable" ? "failed" : outcome;
     setShareState(nextState);
     if (outcome === "shared" || outcome === "copied") {
-      recordShare.mutate({ shareType: "product", productId: product.id });
+      recordShare.mutate({
+        shareType: "product",
+        productId: product.id,
+        ...(sharedCampaignToken ? { campaignToken: sharedCampaignToken } : {}),
+      });
     }
     window.setTimeout(() => setShareState("idle"), 2500);
   };
@@ -176,6 +193,12 @@ export default function ProductDetail() {
                 <FavoriteButton productId={product.id} />
               </div>
             </div>
+            {!nativeShareSupported && (
+              <p className="text-xs leading-5 text-[#52716c]" role="status">
+                This browser copies the listing link instead of opening a native
+                share sheet.
+              </p>
+            )}
             <p className="mt-5 text-sm leading-6 text-[#52716c]">
               {product.description}
             </p>

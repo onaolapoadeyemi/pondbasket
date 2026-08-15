@@ -267,6 +267,9 @@ export default function Cart() {
                       addressId,
                       purpose: line.purpose,
                       idempotencyKey: crypto.randomUUID(),
+                      ...(line.campaignToken
+                        ? { campaignToken: line.campaignToken }
+                        : {}),
                     })
                   }
                   className="mt-5 w-full rounded-full bg-[#0b4f4a]"

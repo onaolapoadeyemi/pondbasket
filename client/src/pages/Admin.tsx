@@ -2,7 +2,14 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { formatNgn } from "@/components/ProductCard";
 import { AdminCommerceControls } from "@/components/AdminCommerceControls";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { trpc } from "@/lib/trpc";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
   AlertTriangle,
   ClipboardCheck,
@@ -18,6 +25,63 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useState } from "react";
+
+const shareTrendChartConfig = {
+  shares: { label: "Share actions", color: "#177e73" },
+} satisfies ChartConfig;
+
+function ShareTrendChart({
+  title,
+  detail,
+  data,
+  isLoading,
+}: {
+  title: string;
+  detail: string;
+  data: { label: string; shares: number }[];
+  isLoading: boolean;
+}) {
+  return (
+    <section className="rounded-[24px] border border-[#092b2a]/10 bg-white p-6">
+      <p className="text-sm font-bold">{title}</p>
+      <p className="mt-1 text-sm text-[#52716c]">{detail}</p>
+      {isLoading ? (
+        <div className="mt-5 h-52 animate-pulse rounded-2xl bg-[#f6f4ec]" />
+      ) : (
+        <ChartContainer
+          config={shareTrendChartConfig}
+          className="mt-5 h-52 w-full"
+          aria-label={title}
+        >
+          <LineChart data={data} margin={{ left: -16, right: 8, top: 8 }}>
+            <CartesianGrid vertical={false} stroke="#092b2a" opacity={0.1} />
+            <XAxis
+              dataKey="label"
+              axisLine={false}
+              tickLine={false}
+              tickMargin={8}
+            />
+            <YAxis
+              allowDecimals={false}
+              axisLine={false}
+              tickLine={false}
+              width={28}
+            />
+            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
+            <Line
+              type="monotone"
+              dataKey="shares"
+              stroke="var(--color-shares)"
+              strokeWidth={2.5}
+              dot={{ fill: "var(--color-shares)", r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ChartContainer>
+      )}
+    </section>
+  );
+}
 
 export default function Admin() {
   const { user, isAuthenticated } = useAuth();
@@ -166,7 +230,15 @@ export default function Admin() {
               {shareAnalytics.data?.product ?? "—"}
             </p>
           </div>
-          <div className="rounded-xl bg-[#f6f4ec] p-4 sm:col-span-2">
+          <div className="rounded-xl bg-[#f6f4ec] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#76938e]">
+              Completed conversions
+            </p>
+            <p className="font-display mt-2 text-2xl font-bold">
+              {shareAnalytics.data?.completedConversions ?? "—"}
+            </p>
+          </div>
+          <div className="rounded-xl bg-[#f6f4ec] p-4 lg:col-span-1">
             <p className="text-[10px] font-bold uppercase tracking-wide text-[#76938e]">
               Most shared listings
             </p>
@@ -195,6 +267,20 @@ export default function Admin() {
           </div>
         </div>
       </section>
+      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        <ShareTrendChart
+          title="Weekly share trend"
+          detail="Daily aggregate share actions over the last seven days."
+          data={shareAnalytics.data?.weeklyTrend ?? []}
+          isLoading={shareAnalytics.isLoading}
+        />
+        <ShareTrendChart
+          title="Monthly share trend"
+          detail="Monthly aggregate share actions over the last six months."
+          data={shareAnalytics.data?.monthlyTrend ?? []}
+          isLoading={shareAnalytics.isLoading}
+        />
+      </div>
       <div className="mt-7 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <section className="rounded-[24px] border border-[#092b2a]/10 bg-white p-6">
           <div className="flex items-start justify-between gap-4">

@@ -14,6 +14,7 @@ export type CartLine = {
     | "freezer"
     | "home_operator"
     | "other";
+  campaignToken?: string;
 };
 type CartContextValue = {
   line: CartLine | null;
