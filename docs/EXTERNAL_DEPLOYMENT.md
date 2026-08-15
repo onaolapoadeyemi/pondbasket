@@ -38,11 +38,27 @@ https://YOUR-VERCEL-DOMAIN/api/oauth/callback
 
 Then use Vercel’s authenticated project interface to create the deployment. Validate sign-in, a protected tRPC request, product-image upload, private document access, storage redirects, and a database-backed order workflow in a preview deployment before promoting it.
 
-## Netlify follow-up
+## Netlify deployment
 
 Netlify’s Express integration runs the application through a Netlify Function. Its documented pattern wraps Express with `serverless-http` and uses redirects to route API paths to that function. [2]
 
-PondBasket does not yet include that Netlify-specific wrapper because deploying it unchanged would require an additional dependency, a `netlify/functions` entry, a `netlify.toml` function/redirect configuration, and platform-specific preview tests. Reuse `server/app.ts` as the shared application factory when implementing that adapter. The same environment, OAuth callback, database, S3-backed storage, and request-size checks listed for Vercel still apply.
+PondBasket now includes that adapter in `netlify/functions/api.ts`. It wraps the shared `server/app.ts` Express factory with `serverless-http`, while `netlify.toml` configures the Node 22 build, generated `public/` publish directory, function bundler, and rewrites for API, storage-proxy, and single-page application routes.
+
+| Netlify setting             | PondBasket value                 |
+| --------------------------- | -------------------------------- |
+| Install command             | `pnpm install --frozen-lockfile` |
+| Build command               | `pnpm build:netlify`             |
+| Publish directory           | `public`                         |
+| Function entry              | `netlify/functions/api.ts`       |
+| Local deployment smoke test | `pnpm smoke:netlify`             |
+
+Import the repository into Netlify and let `netlify.toml` configure the build. Set the same environment categories listed for Vercel in both Deploy Preview and Production contexts. Add the deployed OAuth callback URL to the provider allowlist:
+
+```text
+https://YOUR-NETLIFY-DOMAIN/api/oauth/callback
+```
+
+The local smoke test verifies that Netlify preserves PondBasket’s OAuth route handling. Before a real deploy, validate sign-in, a protected tRPC request, product-image upload, private document access, storage redirects, and a database-backed order workflow in a Deploy Preview.
 
 ## External-hosting limitations
 
@@ -59,6 +75,7 @@ pnpm check
 pnpm test
 pnpm build
 pnpm smoke:vercel
+pnpm smoke:netlify
 pnpm audit --prod --audit-level=low
 ```
 

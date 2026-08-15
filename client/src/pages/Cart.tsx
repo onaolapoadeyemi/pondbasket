@@ -2,6 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { Button } from "@/components/ui/button";
 import { formatNgn } from "@/components/ProductCard";
+import {
+  RequestError,
+  RequestRefreshNotice,
+} from "@/components/RequestFeedback";
 import { useCart } from "@/contexts/CartContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -44,6 +48,8 @@ export default function Cart() {
     profile.data?.addresses.find(address => address.serviceZone === line?.zone)
       ?.id ??
     profile.data?.addresses[0]?.id;
+  const checkoutError = profile.error ?? quote.error;
+  const isCheckoutLoading = profile.isLoading || quote.isLoading;
   const create = trpc.orders.create.useMutation({
     onSuccess: data => setCreated(data),
   });
@@ -177,7 +183,23 @@ export default function Cart() {
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
             Checkout
           </p>
-          {!addressId ? (
+          {checkoutError ? (
+            <RequestError
+              className="mt-5"
+              title="Checkout details could not be prepared."
+              detail={checkoutError.message}
+              onRetry={() => {
+                profile.refetch();
+                quote.refetch();
+              }}
+              isRetrying={profile.isFetching || quote.isFetching}
+            />
+          ) : isCheckoutLoading ? (
+            <div className="mt-5 space-y-4" aria-busy="true">
+              <RequestRefreshNotice label="Preparing your secure quote…" />
+              <div className="h-28 animate-pulse rounded-2xl bg-[#e8e7dc]" />
+            </div>
+          ) : !addressId ? (
             <div className="mt-5 rounded-2xl bg-[#f9d8ce] p-4">
               <p className="text-sm font-bold text-[#9c3b24]">
                 A private delivery address is needed.
@@ -230,6 +252,11 @@ export default function Cart() {
                   </div>
                 </div>
               )}
+              {quote.isFetching && !quote.isLoading ? (
+                <div className="mt-4">
+                  <RequestRefreshNotice label="Updating your quote…" />
+                </div>
+              ) : null}
               {!created ? (
                 <Button
                   disabled={create.isPending || quote.isLoading}

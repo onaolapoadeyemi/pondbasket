@@ -1,8 +1,18 @@
 import { Filter, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
+import {
+  ListingGridSkeleton,
+  RequestError,
+  RequestRefreshNotice,
+} from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import {
+  presentCatalogItems,
+  type CatalogAvailabilityFilter,
+  type CatalogSort,
+} from "@shared/catalogPresentation";
 
 const zones = ["Ajah", "Lekki Phase 1", "Chevron"];
 export default function Shop() {
@@ -12,16 +22,37 @@ export default function Shop() {
   const [fulfillment, setFulfillment] = useState<
     "pickup" | "farmer_delivery" | "platform_delivery" | undefined
   >();
+  const [search, setSearch] = useState("");
+  const [processing, setProcessing] = useState("all");
+  const [availability, setAvailability] =
+    useState<CatalogAvailabilityFilter>("all");
+  const [sort, setSort] = useState<CatalogSort>("recommended");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const input = useMemo(
     () => ({ zone, species, form, fulfillment, verifiedOnly: true }),
     [zone, species, form, fulfillment]
   );
-  const { data, isLoading, error, refetch } = trpc.catalog.list.useQuery(input);
+  const { data, isLoading, isFetching, error, refetch } =
+    trpc.catalog.list.useQuery(input);
+  const items = useMemo(
+    () =>
+      presentCatalogItems(
+        data?.items ?? [],
+        search,
+        processing,
+        availability,
+        sort
+      ),
+    [availability, data?.items, processing, search, sort]
+  );
   const reset = () => {
     setSpecies(undefined);
     setForm(undefined);
     setFulfillment(undefined);
+    setSearch("");
+    setProcessing("all");
+    setAvailability("all");
+    setSort("recommended");
   };
   return (
     <main className="container py-10 sm:py-14">
@@ -43,7 +74,9 @@ export default function Shop() {
           <input
             className="h-11 w-full rounded-xl bg-[#f6f4ec] pl-9 pr-3 text-sm outline-none placeholder:text-[#76938e]"
             placeholder="Search catfish or tilapia"
-            readOnly
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            aria-label="Search fish listings"
           />
         </div>
         <div className="relative">
@@ -103,6 +136,17 @@ export default function Shop() {
             <option value="live">Live</option>
             <option value="frozen">Frozen</option>
           </select>
+          <label className="text-xs font-bold text-[#52716c]">Processing</label>
+          <select
+            value={processing}
+            onChange={event => setProcessing(event.target.value)}
+            className="rounded-lg bg-white px-3 py-2 text-sm"
+          >
+            <option value="all">Any processing</option>
+            <option value="cleaned">Cleaned</option>
+            <option value="whole">Whole</option>
+            <option value="cut">Cut</option>
+          </select>
           <label className="text-xs font-bold text-[#52716c]">
             Fulfillment
           </label>
@@ -125,6 +169,33 @@ export default function Shop() {
             <option value="farmer_delivery">Farmer delivery</option>
             <option value="platform_delivery">Platform delivery</option>
           </select>
+          <label className="text-xs font-bold text-[#52716c]">
+            Availability
+          </label>
+          <select
+            value={availability}
+            onChange={event =>
+              setAvailability(event.target.value as CatalogAvailabilityFilter)
+            }
+            className="rounded-lg bg-white px-3 py-2 text-sm"
+          >
+            <option value="all">All timing</option>
+            <option value="available">Available now</option>
+            <option value="scheduled">Scheduled harvest</option>
+            <option value="preorder">Preorder</option>
+          </select>
+          <label className="text-xs font-bold text-[#52716c]">Sort</label>
+          <select
+            value={sort}
+            onChange={event => setSort(event.target.value as CatalogSort)}
+            className="rounded-lg bg-white px-3 py-2 text-sm"
+          >
+            <option value="recommended">Recommended</option>
+            <option value="price_low">Price: low to high</option>
+            <option value="price_high">Price: high to low</option>
+            <option value="availability_high">Most available</option>
+            <option value="freshness">Freshness: live to frozen</option>
+          </select>
           <button
             onClick={reset}
             className="ml-auto flex items-center gap-1 text-xs font-bold text-[#0b4f4a]"
@@ -135,42 +206,40 @@ export default function Shop() {
         </div>
       )}
       {error ? (
-        <div className="mt-8 rounded-[24px] border border-[#c85535]/25 bg-[#f9d8ce]/45 p-8 text-center">
-          <p className="font-display text-2xl font-bold text-[#9c3b24]">
-            The catalog is taking a moment.
-          </p>
-          <p className="mt-2 text-sm text-[#9c3b24]">{error.message}</p>
-          <Button
-            onClick={() => refetch()}
-            className="mt-5 rounded-full bg-[#0b4f4a]"
-          >
-            Retry catalog
-          </Button>
-        </div>
+        <RequestError
+          className="mt-8"
+          title="The catalog is taking a moment."
+          detail={error.message}
+          onRetry={() => refetch()}
+          isRetrying={isFetching}
+        />
       ) : (
         <>
           <div className="mt-8 flex items-center justify-between">
             <p className="text-sm font-medium text-[#52716c]">
-              {data?.items.length ?? 0} listings available in{" "}
+              {items.length} listing{items.length === 1 ? "" : "s"} available in{" "}
               <span className="font-bold text-[#092b2a]">{zone}</span>
             </p>
-            <p className="hidden text-xs text-[#76938e] sm:block">
-              Prices shown in NGN · Delivery shown before payment
-            </p>
+            <div className="flex items-center gap-3">
+              {isFetching && !isLoading ? (
+                <RequestRefreshNotice label="Refreshing fish…" />
+              ) : null}
+              <p className="hidden text-xs text-[#76938e] sm:block">
+                Prices shown in NGN · Delivery shown before payment
+              </p>
+            </div>
           </div>
-          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {isLoading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-[430px] animate-pulse rounded-[22px] bg-[#e8e7dc]"
-                  />
-                ))
-              : data?.items.map(item => (
+          <div className="mt-5">
+            {isLoading ? <ListingGridSkeleton /> : null}
+            {!isLoading ? (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map(item => (
                   <ProductCard key={item.id} item={item} />
                 ))}
+              </div>
+            ) : null}
           </div>
-          {!isLoading && data?.items.length === 0 && (
+          {!isLoading && items.length === 0 && (
             <div className="mt-8 rounded-[24px] border border-dashed border-[#092b2a]/20 bg-white p-12 text-center">
               <p className="font-display text-2xl font-bold">
                 Nothing matches yet.

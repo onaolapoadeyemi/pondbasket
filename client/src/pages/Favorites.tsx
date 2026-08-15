@@ -1,9 +1,14 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { ProductCard } from "@/components/ProductCard";
+import {
+  ListingGridSkeleton,
+  RequestError,
+  RequestRefreshNotice,
+} from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { CircleAlert, Heart, ShoppingBasket } from "lucide-react";
+import { Heart, ShoppingBasket } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Favorites() {
@@ -38,24 +43,18 @@ export default function Favorites() {
   if (favorites.isLoading)
     return (
       <main className="container py-12">
-        <div className="h-64 animate-pulse rounded-[30px] bg-[#e8e7dc]" />
+        <ListingGridSkeleton count={3} />
       </main>
     );
   if (favorites.error)
     return (
       <main className="container py-12">
-        <div className="rounded-[24px] border border-[#c85665]/20 bg-white p-7">
-          <CircleAlert className="h-6 w-6 text-[#b84458]" />
-          <h1 className="font-display mt-3 text-3xl font-bold">
-            Saved fish could not be loaded.
-          </h1>
-          <Button
-            onClick={() => favorites.refetch()}
-            className="mt-5 rounded-full bg-[#0b4f4a]"
-          >
-            Try again
-          </Button>
-        </div>
+        <RequestError
+          title="Saved fish could not be loaded."
+          detail={favorites.error.message}
+          onRetry={() => favorites.refetch()}
+          isRetrying={favorites.isFetching}
+        />
       </main>
     );
   const items = favorites.data?.items ?? [];
@@ -82,6 +81,11 @@ export default function Favorites() {
           Continue shopping
         </Link>
       </div>
+      {favorites.isFetching ? (
+        <div className="mt-5">
+          <RequestRefreshNotice label="Refreshing saved fish…" />
+        </div>
+      ) : null}
       {items.length ? (
         <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {items.map(item => (

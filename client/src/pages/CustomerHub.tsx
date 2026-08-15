@@ -1,5 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
+import {
+  RequestError,
+  RequestRefreshNotice,
+} from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import {
@@ -134,6 +138,34 @@ export default function CustomerHub() {
   };
   const actionError =
     confirmDelivery.error ?? openDispute.error ?? timeline.error;
+  const customerDataError =
+    profileQuery.error ?? ordersQuery.error ?? notificationQuery.error;
+  const customerDataRefreshing =
+    profileQuery.isFetching ||
+    ordersQuery.isFetching ||
+    notificationQuery.isFetching;
+  if (customerDataError)
+    return (
+      <main className="container py-10 sm:py-14">
+        <p className="text-xs font-bold uppercase tracking-[.16em] text-[#177e73]">
+          Customer space
+        </p>
+        <h1 className="font-display mt-3 text-5xl font-bold tracking-[-.07em] text-[#092b2a]">
+          {title}
+        </h1>
+        <RequestError
+          className="mt-8"
+          title="Your customer details could not be loaded."
+          detail={customerDataError.message}
+          onRetry={() => {
+            profileQuery.refetch();
+            ordersQuery.refetch();
+            notificationQuery.refetch();
+          }}
+          isRetrying={customerDataRefreshing}
+        />
+      </main>
+    );
   return (
     <main className="container py-10 sm:py-14">
       <div className="max-w-3xl">
@@ -144,6 +176,11 @@ export default function CustomerHub() {
           {title}
         </h1>
       </div>
+      {customerDataRefreshing ? (
+        <div className="mt-5">
+          <RequestRefreshNotice label="Refreshing your customer details…" />
+        </div>
+      ) : null}
       {location === "/orders" && (
         <section className="mt-9">
           <div className="rounded-[22px] border border-[#092b2a]/10 bg-white p-5">
