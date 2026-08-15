@@ -13,14 +13,17 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock3,
+  Copy,
   MapPin,
   Minus,
   Plus,
+  Share2,
   ShieldCheck,
   Truck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
+import { shareLink } from "@/lib/shareLink";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/shop/:id");
@@ -30,8 +33,12 @@ export default function ProductDetail() {
   const { isAuthenticated } = useAuth();
   const catalog = trpc.catalog.list.useQuery();
   const product = catalog.data?.items.find(item => item.id === productId);
+  const recordShare = trpc.analytics.recordShare.useMutation();
   const [quantity, setQuantity] = useState<number | null>(null);
   const [zone, setZone] = useState("Ajah");
+  const [shareState, setShareState] = useState<
+    "idle" | "shared" | "copied" | "failed"
+  >("idle");
   const effectiveQuantity = quantity ?? product?.minOrder ?? 1;
   const quoteInput = useMemo(
     () =>
@@ -83,6 +90,20 @@ export default function ProductDetail() {
     });
     setLocation("/cart");
   };
+  const shareProduct = async () => {
+    const outcome = await shareLink({
+      title: `${product.species} from ${product.farmer} | PondBasket`,
+      text: `View this verified ${product.form} ${product.species} listing on PondBasket.`,
+      url: `${window.location.origin}/shop/${product.id}`,
+    });
+    if (outcome === "cancelled") return;
+    const nextState = outcome === "unavailable" ? "failed" : outcome;
+    setShareState(nextState);
+    if (outcome === "shared" || outcome === "copied") {
+      recordShare.mutate({ shareType: "product", productId: product.id });
+    }
+    window.setTimeout(() => setShareState("idle"), 2500);
+  };
   const productClass =
     product.species === "catfish" ? "bg-[#0b4f4a]" : "bg-[#d6e46b]";
 
@@ -115,8 +136,8 @@ export default function ProductDetail() {
             </div>
           </div>
           <div className="mt-6 rounded-[22px] border border-[#092b2a]/10 bg-white p-6">
-            <div className="flex items-start justify-between gap-5">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-[.14em] text-[#177e73]">
                   From a verified farm
                 </p>
@@ -128,7 +149,32 @@ export default function ProductDetail() {
                   {product.farmerArea} · General farm area only
                 </p>
               </div>
-              <FavoriteButton productId={product.id} />
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <Button
+                  type="button"
+                  onClick={shareProduct}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 rounded-full border-[#092b2a]/15 text-[#092b2a] sm:flex-none"
+                  aria-live="polite"
+                >
+                  {shareState === "shared" || shareState === "copied" ? (
+                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-[#177e73]" />
+                  ) : shareState === "failed" ? (
+                    <Copy className="mr-1.5 h-3.5 w-3.5 text-[#9c3b24]" />
+                  ) : (
+                    <Share2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  {shareState === "shared"
+                    ? "Shared"
+                    : shareState === "copied"
+                      ? "Link copied"
+                      : shareState === "failed"
+                        ? "Copy unavailable"
+                        : "Copy link"}
+                </Button>
+                <FavoriteButton productId={product.id} />
+              </div>
             </div>
             <p className="mt-5 text-sm leading-6 text-[#52716c]">
               {product.description}

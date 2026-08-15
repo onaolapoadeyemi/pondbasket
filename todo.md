@@ -67,3 +67,9 @@
 - [x] Synchronize catalog search, filters, and sorting with validated URL query parameters that restore shared result views.
 - [x] Add a catalog Share control that copies the current filtered URL with clear success and clipboard fallback feedback.
 - [x] Include shared domain and URL-state regression tests in the Vitest discovery configuration.
+- [x] Add native mobile share-sheet behavior with clipboard fallback to PondBasket catalog sharing.
+- [x] Add a product-detail Copy link control for sharing individual fish listings.
+- [x] Add privacy-conscious aggregate analytics for share interactions without storing user identifiers, IP addresses, or search values.
+- [x] Add an explicit loading state for the administrator share analytics panel before showing empty aggregate results.
+- [x] Ensure catalog-card canonical URLs resolve their corresponding product details so Copy link always shares an openable listing.
+- [x] Refine the mobile product-detail action layout so Copy link and Save for later remain fully visible without overlap.

@@ -12,6 +12,7 @@ import {
   MapPinned,
   PackageCheck,
   Plus,
+  Share2,
   Settings2,
   ShieldAlert,
   UsersRound,
@@ -27,6 +28,9 @@ export default function Admin() {
   const zones = trpc.admin.zones.useQuery(undefined, { enabled });
   const flags = trpc.admin.flags.useQuery(undefined, { enabled });
   const commerce = trpc.admin.commerce.useQuery(undefined, { enabled });
+  const shareAnalytics = trpc.admin.shareAnalytics.useQuery(undefined, {
+    enabled,
+  });
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [documentId, setDocumentId] = useState<number | null>(null);
   const [zoneForm, setZoneForm] = useState({
@@ -87,7 +91,8 @@ export default function Admin() {
     setFlag.error ??
     saveCommerce.error ??
     addZone.error ??
-    documentLink.error;
+    documentLink.error ??
+    shareAnalytics.error;
   return (
     <main className="container py-10 sm:py-14">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -124,6 +129,72 @@ export default function Admin() {
           </article>
         ))}
       </div>
+      <section className="mt-5 rounded-[24px] border border-[#092b2a]/10 bg-white p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="max-w-xl">
+            <div className="flex items-center gap-2">
+              <Share2 className="h-5 w-5 text-[#177e73]" />
+              <p className="text-sm font-bold">Sharing signal</p>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-[#52716c]">
+              Aggregate share actions only. PondBasket does not store customer
+              identities, IP addresses, devices, URLs, or search queries for
+              this measurement.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-[#eff3db] px-5 py-3 text-right">
+            <p className="font-display text-3xl font-bold tracking-[-.05em] text-[#092b2a]">
+              {shareAnalytics.data?.total ?? "—"}
+            </p>
+            <p className="text-xs font-bold text-[#52716c]">share actions</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl bg-[#f6f4ec] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#76938e]">
+              Catalog shares
+            </p>
+            <p className="font-display mt-2 text-2xl font-bold">
+              {shareAnalytics.data?.catalog ?? "—"}
+            </p>
+          </div>
+          <div className="rounded-xl bg-[#f6f4ec] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#76938e]">
+              Listing shares
+            </p>
+            <p className="font-display mt-2 text-2xl font-bold">
+              {shareAnalytics.data?.product ?? "—"}
+            </p>
+          </div>
+          <div className="rounded-xl bg-[#f6f4ec] p-4 sm:col-span-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#76938e]">
+              Most shared listings
+            </p>
+            {shareAnalytics.isLoading ? (
+              <p className="mt-2 flex items-center gap-2 text-sm text-[#52716c]">
+                <LoaderCircle className="h-4 w-4 animate-spin text-[#177e73]" />
+                Loading aggregate share activity…
+              </p>
+            ) : shareAnalytics.data?.topProducts.length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {shareAnalytics.data.topProducts.map(item => (
+                  <a
+                    key={item.productId}
+                    href={`/shop/${item.productId}`}
+                    className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-[#0b4f4a] underline-offset-2 hover:underline"
+                  >
+                    Listing #{item.productId} · {item.shareCount}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-[#52716c]">
+                No product links shared yet.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
       <div className="mt-7 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <section className="rounded-[24px] border border-[#092b2a]/10 bg-white p-6">
           <div className="flex items-start justify-between gap-4">

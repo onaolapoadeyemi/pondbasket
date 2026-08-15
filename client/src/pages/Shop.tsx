@@ -17,6 +17,7 @@ import {
 } from "@/components/RequestFeedback";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { shareLink } from "@/lib/shareLink";
 import { presentCatalogItems } from "@shared/catalogPresentation";
 import {
   DEFAULT_CATALOG_URL_STATE,
@@ -35,9 +36,10 @@ export default function Shop() {
     [locationSearch]
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
-    "idle"
-  );
+  const [shareState, setShareState] = useState<
+    "idle" | "shared" | "copied" | "failed"
+  >("idle");
+  const recordShare = trpc.analytics.recordShare.useMutation();
   const updateCatalogState = (updates: Partial<CatalogUrlState>) => {
     const nextSearch = serializeCatalogUrlState({
       ...catalogState,
@@ -80,11 +82,16 @@ export default function Shop() {
     const url = new URL(window.location.href);
     url.pathname = "/shop";
     url.search = serializeCatalogUrlState(catalogState);
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      setShareState("copied");
-    } catch {
-      setShareState("failed");
+    const outcome = await shareLink({
+      title: `Fresh fish in ${catalogState.zone} | PondBasket`,
+      text: "Explore verified catfish and tilapia listings from local farms.",
+      url: url.toString(),
+    });
+    if (outcome === "cancelled") return;
+    const nextState = outcome === "unavailable" ? "failed" : outcome;
+    setShareState(nextState);
+    if (outcome === "shared" || outcome === "copied") {
+      recordShare.mutate({ shareType: "catalog" });
     }
     window.setTimeout(() => setShareState("idle"), 2500);
   };
@@ -141,18 +148,20 @@ export default function Shop() {
           className="h-11 rounded-xl border-[#092b2a]/15 text-[#092b2a]"
           aria-live="polite"
         >
-          {shareState === "copied" ? (
+          {shareState === "shared" || shareState === "copied" ? (
             <Check className="mr-2 h-4 w-4 text-[#177e73]" />
           ) : shareState === "failed" ? (
             <Copy className="mr-2 h-4 w-4 text-[#9c3b24]" />
           ) : (
             <Share2 className="mr-2 h-4 w-4" />
           )}
-          {shareState === "copied"
-            ? "Link copied"
-            : shareState === "failed"
-              ? "Copy unavailable"
-              : "Share"}
+          {shareState === "shared"
+            ? "Shared"
+            : shareState === "copied"
+              ? "Link copied"
+              : shareState === "failed"
+                ? "Copy unavailable"
+                : "Share"}
         </Button>
       </div>
       {filtersOpen && (
